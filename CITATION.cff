@@ -6,6 +6,11 @@ authors:
   - family-names: "Pattofatto"
     given-names: "Lorenzo"
 version: "2.9.3"
+doi: "10.5281/zenodo.24355143"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.24355143"
+    description: "Zenodo archive of version 2.9.3"
 date-released: "2026-11-18"
 license: MIT
 abstract: >-

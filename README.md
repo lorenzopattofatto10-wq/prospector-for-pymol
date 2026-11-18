@@ -1,5 +1,7 @@
 # Prospector for PyMOL
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24355143.svg)](https://doi.org/10.5281/zenodo.24355143)
+
 A PyMOL plugin for working with protein structures - and small molecules - by name. You type what you
 want in plain words or short commands; Prospector finds the structure, shows
 it, and explains what is on screen and why.
@@ -396,4 +398,10 @@ and is not made or endorsed by Schrödinger.
 
 MIT - see [LICENSE](LICENSE). You may use, change and share Prospector for PyMOL freely,
 including in teaching and commercial work, as long as the licence notice stays
-with it. To cite Prospector, see [CITATION.cff](CITATION.cff).
+with it. To cite Prospector, use the DOI [10.5281/zenodo.24355143](https://doi.org/10.5281/zenodo.24355143), for example:
+
+> Pattofatto, L. (2026). *Prospector for PyMOL* (Version 2.9.3) [Computer software].
+> Zenodo. https://doi.org/10.5281/zenodo.24355143
+
+GitHub's **Cite this repository** button (from [CITATION.cff](CITATION.cff)) gives the
+same in other formats, such as BibTeX.
