@@ -376,6 +376,8 @@ It writes `dist/prospector.zip` (with the licence and this README inside).
   a one-hour lab for first-year students: the heme pocket, sickle-cell anaemia
   (Glu6Val) and the change between haemoglobin with and without oxygen.
   [Teacher notes and answer key](docs/worksheets/haemoglobin-teacher.md).
+  Printable PDFs: [student sheet](docs/worksheets/haemoglobin-student.pdf),
+  [teacher notes](docs/worksheets/haemoglobin-teacher.pdf).
 
 Want to help, report a problem or add a worksheet? See [CONTRIBUTING.md](CONTRIBUTING.md).
 

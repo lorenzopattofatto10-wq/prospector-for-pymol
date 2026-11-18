@@ -6,7 +6,7 @@ You will load the real 3D structure of human haemoglobin, find where oxygen
 binds, see how one changed amino acid causes sickle-cell anaemia, and compare
 haemoglobin without oxygen and with it.
 
-**You need:** PyMOL (open-source or Incentive) with Prospector installed
+**You need:** PyMOL (open-source or Incentive) with Prospector 2.9.4 or later installed
 ([download](https://github.com/lorenzopattofatto10-wq/prospector-for-pymol/releases/latest)),
 and an internet connection.
 

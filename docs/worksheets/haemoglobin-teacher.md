@@ -19,7 +19,7 @@ For the student sheet [haemoglobin-student.md](haemoglobin-student.md).
 `~/.prospector`, so the class still works if the network is slow. The AI
 feature is not needed for this lab.
 
-The values below were obtained with Prospector 2.9.3. A later PDB release could
+The values below were obtained with Prospector 2.9.4 (the lab needs 2.9.4 or later). A later PDB release could
 make Prospector pick a different haemoglobin entry in Part 1; if so, have
 students type `grab 1A3N` so the numbers match.
 
@@ -39,7 +39,9 @@ students type `grab 1A3N` so the numbers match.
    heme pocket instead.
 5. **His45, His58, His87** (chain A pocket residues include MET32 … HIS45 PHE46
    HIS58 … HIS87 …).
-6. | Residue | Distance (Å) | Bonded? |
+6. Distances to the iron:
+
+   | Residue | Distance (Å) | Bonded? |
    |---|---|---|
    | His87 (A) | **2.24** (NE2–Fe) | **yes** – "close enough to be bonded to the metal ion" |
    | His58 (A) | **4.19** (CE1–Fe) | **no** – in contact, not bonded |
@@ -61,7 +63,9 @@ students type `grab 1A3N` so the numbers match.
     counts the mature protein. HGVS notation is therefore p.Glu7Val.
 11. E>A, E>K, E>Q, E>V. **E>V is Hb S** (sickle cell; heterozygotes are
     protected against malaria; dbSNP rs334). E>K is Hb C.
-12. | | Before | After |
+12. From Prospector's table:
+
+    | | Before | After |
     |---|---|---|
     | Amino acid | glutamate | valine |
     | Charge | negative | none (a charge is lost) |
