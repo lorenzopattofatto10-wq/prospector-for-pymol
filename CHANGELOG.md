@@ -1,5 +1,25 @@
 # Changelog - Prospector for PyMOL
 
+## 2.9.4
+
+Found while testing the haemoglobin worksheet:
+
+- `whatif haemoglobin B/6 V` (an address, then the new amino acid) now works,
+  also as `B/6 to valine`.
+- `explain` suggests a change in the structure's own numbering (`whatif 1A3N
+  B/E6V`), not UniProt's, which can differ (haemoglobin's Glu6 is UniProt's 7).
+- `measure A/87 to the iron` finds a metal atom inside a molecule, such as the
+  iron of heme; the closest one is measured.
+- `pocket oxygen` (and `ask where does oxygen bind`) with a protein on screen
+  uses the molecule in that structure instead of downloading a lone O2; in a
+  heme protein without bound O2 it shows the heme pocket and says why.
+- `build assembly` names the chains A, B, C, D ... copy by copy, like a normal
+  entry, so `compare` pairs the right chains (deoxy vs oxy haemoglobin now gives
+  the expected quaternary change).
+
+Added: a haemoglobin worksheet with teacher notes (`docs/worksheets/`),
+`CONTRIBUTING.md`, and a paper template with checked references (`paper/`).
+
 ## 2.9.3
 
 - Archived on Zenodo, so this version has a DOI and can be cited.

@@ -800,6 +800,35 @@ def _coarse(plan, name):
     return len(jobs) * len(set(a for _, asyms in jobs for a in asyms)), step, len(model.atom)
 
 
+def _plain_chain_names(obj):
+    """Assembly files call the copies A, B, A-2, B-2 ...  Rename them A, B, C, D
+    (in file order) so that chains look - and compare - like a normal entry.
+    Returns [(old, new)], empty when nothing was renamed (or over 26 chains)."""
+    order = []
+    cmd.iterate(obj, "order.append(chain) if not order or order[-1] != chain else None",
+                space={"order": order})
+    chains = []
+    for chain in order:
+        if chain not in chains:
+            chains.append(chain)
+    if not any("-" in c for c in chains) or len(chains) > 26:
+        return []
+    bases = []
+    for chain in chains:
+        if chain.split("-")[0] not in bases:
+            bases.append(chain.split("-")[0])
+
+    def copy_order(chain):            # copy 1 (A, B), then copy 2 (A-2, B-2) ...
+        base_name, _, number = chain.partition("-")
+        return (int(number) if number.isdigit() else 1, bases.index(base_name))
+    chains.sort(key=copy_order)
+    letters = [chr(ord("A") + i) for i in range(len(chains))]
+    mapping = dict(zip(chains, letters))
+    cmd.alter(obj, "chain = segi = mapping.get(chain, chain)", space={"mapping": mapping})
+    cmd.sort(obj)
+    return [(old, mapping[old]) for old in chains if old != mapping[old]]
+
+
 def _assembly(words, label):
     text = " ".join(w for w in words if w.lower() not in ("of", "the", "a", "whole", "complete",
                                                            "full", "assembly"))
@@ -877,6 +906,7 @@ def _assembly(words, label):
                             "" if plan["chains"] == 1 else "s"))
         elif plan["mode"] == "full":
             cmd.load(plan["path"], name)
+            renamed = _plain_chain_names(name)
             cmd.hide("everything", name)
             cmd.show("cartoon", name)
             cmd.show("sticks", "%s and organic" % name)
@@ -890,6 +920,10 @@ def _assembly(words, label):
                          "%d atoms." % (plan["deposited_chains"],
                                         "" if plan["deposited_chains"] == 1 else "s",
                                         plan["chains"], plan["oligomer"] or "?", plan["atoms"]))
+            if renamed:
+                lines.append("CHAINS       named %s, like a normal PDB entry (the file calls the "
+                             "copies %s)" % (", ".join(new for _, new in renamed),
+                                             ", ".join(old for old, _ in renamed)))
             lines.append("ON SCREEN    every chain as a ribbon in its own colour; bound "
                          "molecules as sticks, metal ions as balls")
         else:

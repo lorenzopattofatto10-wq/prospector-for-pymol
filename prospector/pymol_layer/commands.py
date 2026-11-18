@@ -13,7 +13,7 @@ from ..core import cache, card, chemcomp, http, rcsb, report, search, store, uni
 from ..core import features as feat
 from . import teach, worker
 
-VERSION = "2.9.3"
+VERSION = "2.9.4"
 _listeners = []   # panel callbacks: function(command_name, search.Result)
 
 
@@ -1269,6 +1269,24 @@ def _residue_selection(obj, chain, resn, resi):
     return "%s and %sresn %s and resi %s" % (obj, chain_part, resn, label)
 
 
+_GASES = {"OXY": "Oxygen (O2)", "CMO": "Carbon monoxide", "NO": "Nitric oxide"}
+
+
+def _ligand_word(text):
+    """'oxygen', 'the heme', 'zinc' -> its PDB code, else None."""
+    from . import places
+    words = [w for w in text.lower().split() if w not in ("the", "a", "an", "of")]
+    phrase = " ".join(words)
+    extra = {"o2": "OXY", "dioxygen": "OXY", "carbon monoxide": "CMO", "co": "CMO",
+             "nitric oxide": "NO"}
+    if phrase in extra:
+        return extra[phrase]
+    for code, names in places.LIGAND_WORDS.items():
+        if phrase in names:
+            return code
+    return None
+
+
 def pocket(*args, **kwargs):
     """
 DESCRIPTION
@@ -1292,6 +1310,7 @@ EXAMPLES
     label = "pocket %s" % raw
     obj, identity, code, cutoff = None, None, "", 4.0
     pending = {}
+    pending_note = []
 
     def before():
         nonlocal obj, identity, code, cutoff
@@ -1306,6 +1325,20 @@ EXAMPLES
             elif len(words) == 1 and _molecules() and \
                     re.match(r"^[A-Za-z0-9]{1,3}$", words[0]):
                 code = words[0].upper()         # just a ligand code, e.g. "pocket HEM"
+            elif _molecules() and _ligand_word(" ".join(words)):
+                # "pocket oxygen" with a protein on screen: a molecule IN it, not a
+                # new download.  Oxygen, CO and NO bind to the iron of heme.
+                code = _ligand_word(" ".join(words))
+                current = _pick_object("", "pocket")[0]
+                present = set()
+                if current:
+                    cmd.iterate("%s and not polymer and not solvent" % current,
+                                "present.add(resn)", space={"present": present})
+                if code not in present and code in _GASES and "HEM" in present:
+                    pending_note.append(
+                        "%s is not bound in %s, but it binds to the iron at the centre "
+                        "of each heme (HEM) - this is that pocket." % (_GASES[code], current))
+                    code = "HEM"
             else:                               # a protein name: find and load it first
                 name_words = list(words)
                 if len(name_words) > 1 and re.match(r"^[A-Z0-9]{1,3}$", name_words[-1]):
@@ -1348,6 +1381,8 @@ EXAMPLES
         if error:
             return _unexpected(error)
         _header(label)
+        for note in pending_note:
+            _say("NOTE         " + note)
         if pending:
             if pending["fetched"]["error"]:
                 _say(pending["fetched"]["error"])

@@ -856,9 +856,12 @@ EXAMPLES
             _say("DISEASE      %d known disease variant%s at this position: %s"
                  % (len(changes), "" if len(changes) == 1 else "s", ", ".join(changes[:10])))
             _say("             e.g. %s" % variants[-1][:150])
-            first = changes[-1].replace(">", "%s" % position) if ">" in changes[-1] else ""
-            if re.match(r"^[A-Z]\d+[A-Z]$", first):
-                _say("             model one with:  mutate %s %s" % (obj, first))
+            # the suggestion uses the FILE's numbering (UniProt's can differ by one
+            # or more: haemoglobin's Glu6 is UniProt position 7)
+            first = changes[-1].replace(">", "%s" % resi) if ">" in changes[-1] else ""
+            if re.match(r"^[A-Z]-?\d+[A-Z]?[A-Z]$", first):
+                _say("             model one with:  whatif %s %s%s"
+                     % (obj, "%s/" % chain if chain else "", first))
         _say("")
         _say("ON SCREEN    the residue as orange sticks with its name tag; the residues "
              "around it are the ribbon")
@@ -870,6 +873,12 @@ EXAMPLES
 
 # ------------------------------------------------------------------ measure
 _measures = [0]
+
+
+_METAL_WORDS = {"iron": "Fe", "fe": "Fe", "zinc": "Zn", "zn": "Zn", "copper": "Cu",
+                "cu": "Cu", "magnesium": "Mg", "mg": "Mg", "calcium": "Ca",
+                "manganese": "Mn", "mn": "Mn", "cobalt": "Co", "nickel": "Ni",
+                "sodium": "Na", "potassium": "K", "metal": "Fe+Zn+Cu+Mg+Ca+Mn+Co+Ni"}
 
 
 def measure(*args, **kwargs):
@@ -901,6 +910,14 @@ EXAMPLES
             _say("Each can be a residue (H/57), an atom (H/57/NE2) or a ligand code (HEM).")
             return
         selections = [_spec_selection(obj, word) for word in rest]
+        metal_words = []
+        for index, word in enumerate(rest):
+            element = _METAL_WORDS.get(word.lower())
+            if selections[index] is None and element and \
+                    cmd.count_atoms("%s and elem %s" % (obj, element)):
+                # "the iron": a metal atom, also one inside a molecule (the Fe of heme)
+                selections[index] = "(%s and elem %s)" % (obj, element)
+                metal_words.append(index)
         for word, selection in zip(rest, selections):
             if selection is None:
                 _say("I can't find '%s' in %s. Use chain/number (e.g. %s) or a ligand "
@@ -915,6 +932,10 @@ EXAMPLES
                 if best is None or d < best[0]:
                     best = (d, a, b)
         distance, a, b = best
+        for index in metal_words:          # of all the irons, the one that was measured
+            atom = a if index == 0 else b
+            selections[index] = "(%s and chain %s and resi %s and name %s)" % (
+                obj, atom.chain or "''", atom.resi, atom.name)
         existing = cmd.get_names("all")
         _measures[0] = 1
         while "measure_%d" % _measures[0] in existing:      # first free name

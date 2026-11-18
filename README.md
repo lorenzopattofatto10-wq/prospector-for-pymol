@@ -23,7 +23,7 @@ added for the sentences the rules do not understand (see below).
    older `prospector`.
 2. **Install New Plugin → Choose file…** and select `dist/prospector.zip`.
 3. Close PyMOL completely and open it again.
-4. The log should show `Prospector 2.9.3 loaded.` If it shows an older number,
+4. The log should show `Prospector 2.9.4 loaded.` If it shows an older number,
    the old copy is still running.
 
 Requirements: PyMOL 2.x or 3.x with Python 3.7+ (open-source or Incentive) and
@@ -369,6 +369,15 @@ python build_zip.py
 ```
 
 It writes `dist/prospector.zip` (with the licence and this README inside).
+
+## Teaching materials
+
+- [Haemoglobin: from a name to a disease](docs/worksheets/haemoglobin-student.md) -
+  a one-hour lab for first-year students: the heme pocket, sickle-cell anaemia
+  (Glu6Val) and the change between haemoglobin with and without oxygen.
+  [Teacher notes and answer key](docs/worksheets/haemoglobin-teacher.md).
+
+Want to help, report a problem or add a worksheet? See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Data sources and credits
 

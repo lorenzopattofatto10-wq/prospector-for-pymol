@@ -5,8 +5,7 @@ type: software
 authors:
   - family-names: "Pattofatto"
     given-names: "Lorenzo"
-version: "2.9.3"
-doi: "10.5281/zenodo.24355143"
+version: "2.9.4"
 identifiers:
   - type: doi
     value: "10.5281/zenodo.24355143"

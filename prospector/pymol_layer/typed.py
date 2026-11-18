@@ -174,6 +174,23 @@ def _tidy_residues(command, words):
             out.append(word)                      # p53, kras: a protein, not a residue
             index += 1
             continue
+        if changing and "/" in word and re.match(r"^[a-z0-9]{1,4}/[a-z]{0,3}-?\d+[a-z]?$", low) \
+                and not re.match(r"^.*/[a-z]-?\d+[a-z]$", low):
+            # B/6 V, B/6 to valine, B/glu6 val  ->  B/6V
+            step = index + 1
+            if following in ("to", "into", "becomes", "->", "=>", ">", "with", "as"):
+                step += 1
+            target = words[step].lower() if step < len(words) else ""
+            if target in amino:
+                prefix, _, rest = word.partition("/")
+                letters = re.match(r"^([a-z]{0,3})(-?\d+)$", rest.lower())
+                if letters:
+                    original = letters.group(1)
+                    lead = amino.get(original, "") if original else ""
+                    out.append("%s/%s%s%s" % (prefix.upper(), lead, letters.group(2),
+                                              amino[target]))
+                    index = step + 1
+                    continue
         if base._known_object(word) or "/" in word:
             out.append(word)
             index += 1
