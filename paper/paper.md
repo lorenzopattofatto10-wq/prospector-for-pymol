@@ -25,64 +25,60 @@ code. A student types `grab haemoglobin`; Prospector finds the protein in
 UniProt [@uniprot2023], ranks its experimental structures in the Protein Data
 Bank [@berman2000pdb], loads the best one and says why it was chosen. It then
 explains what is on the screen: functional sites, bound molecules, known
-disease variants and the meaning of each colour. Further commands recolour and
-redraw the structure, measure distances and interpret them, show a mutation
-next to the original protein, compare two structures, and build idealised
-models of DNA, RNA, peptides, lipid membranes and micelles, alongside real
-biological assemblies rebuilt from the PDB. Requests can also be written as
-plain sentences (`ask where does oxygen bind`), and every feature is available
-both as a command and as a button in a panel docked inside PyMOL. Because
-Prospector can print the plain PyMOL commands behind each step, it doubles as
-a way to learn PyMOL itself.
+disease variants and the meaning of each colour. Students can recolour and
+redraw the structure, measure and interpret distances, see a mutation next to
+the original protein, compare structures, and build models of DNA, RNA,
+peptides, membranes and micelles. Requests can also be typed as plain
+sentences, and every feature is a button in a panel docked inside PyMOL. The
+plugin comes with a one-hour laboratory worksheet on haemoglobin.
 
 # Statement of need
 
-PyMOL is one of the most widely used programs for viewing biomolecules, and it
-is common in undergraduate biology and biochemistry teaching. For a beginner,
-however, it raises three barriers before any biology is learned. First, a
-structure must be requested by its four-character PDB identifier, so students
-have to leave the program, search a database and choose among dozens or
-hundreds of entries without knowing which are suitable. Second, almost every
-action requires PyMOL's command and selection syntax. Third, the program shows
-a structure but does not explain it: which residues bind the ligand, whether a
-distance means a bond, or what a mutation changes.
+PyMOL is one of the most widely used programs for viewing biomolecules and is
+common in undergraduate teaching. For a beginner, however, it raises three
+barriers before any biology is learned. A structure must be requested by its
+four-character PDB identifier, so students leave the program to search a
+database and choose among dozens or hundreds of entries. Almost every action
+needs PyMOL's command and selection syntax. And the program shows a structure
+without explaining it: which residues bind the ligand, whether a distance
+means a bond, or what a mutation changes.
 
 Web resources address parts of this. Proteopedia [@hodis2008proteopedia]
 pairs structures with explanatory text, and the Mol\* viewer
 [@sehnal2021molstar] makes structures easy to open in a browser. Neither brings
 name-based searching, explanation and experimentation into the desktop viewer
 that many courses and research groups already use. Prospector is aimed at
-students in their first years of biology, biochemistry or biotechnology, and
-at teachers who want a lab session to be about proteins rather than about
-software syntax.
+students in the first years of biology, biochemistry or biotechnology, and at
+teachers who want a lab session to be about proteins rather than syntax.
 
-# Features and design
+# Learning objectives
 
-Prospector adds 41 commands to PyMOL. The main groups are:
+With Prospector, students can:
 
-- **Find and load:** `find` and `grab` resolve a protein name, gene symbol,
-  UniProt accession or PDB ID, score candidate structures on how well they
-  match the name, sequence coverage, resolution, organism, method and age
-  (with a small bonus for textbook structures), and explain the ranking. Ambiguous names (such as
-  "myosin") produce a numbered list instead of a guess. Proteins without an
-  experimental structure can be loaded as predictions from the AlphaFold
-  Protein Structure Database [@jumper2021alphafold; @varadi2024afdb], clearly
-  labelled as such.
-- **Understand:** `about`, `tour`, `explain`, `features` and `pocket` combine
-  the structure with UniProt annotations, mapped to the structure's residues
-  through SIFTS [@dana2019sifts], to describe sites, domains and disease
-  variants in plain words.
-- **Look and select:** `look`, `viewas`, `scout` and `choose` change colours
-  and representations, or select atoms described in words, showing the
-  equivalent PyMOL selection.
-- **Experiment:** `whatif` swaps a residue and shows the original and changed
-  protein side by side with the changes in charge, size, contacts and hydrogen
-  bonds (\autoref{fig:whatif}); `measure` interprets distances; `compare`
-  superimposes two structures and reports where they differ.
-- **Build:** `build` creates idealised nucleic acids, peptides, membranes and
-  micelles, each marked as an idealised model, and real biological assemblies
-  from the PDB. Small molecules not in the PDB can be loaded from PubChem
-  [@kim2023pubchem].
+1. find and load a protein structure from its name, and judge whether it is a
+   suitable one (method, resolution, coverage, organism);
+2. locate functional sites and bound molecules, and relate them to the
+   protein's function;
+3. interpret measured distances (bonds, hydrogen bonds, contacts);
+4. connect a change in sequence to its structural and medical consequences;
+5. distinguish changes within a chain from changes between chains; and
+6. gradually learn the PyMOL commands behind each step.
+
+# Instructional design
+
+Every command answers in the same plain-language layout: what is now on
+screen, what it means, and what to try next. Ambiguous names (such as
+"myosin") give a numbered list instead of a guess, and models that are not
+experimental structures, such as AlphaFold predictions
+[@jumper2021alphafold; @varadi2024afdb] or idealised membranes, are labelled as
+such. Experimenting is safe: `whatif` changes a residue in a copy of the
+protein and shows the original and the changed version side by side, with the
+differences in charge, size, contacts and hydrogen bonds
+(\autoref{fig:whatif}), and `back` undoes any view. A teaching mode prints the
+plain PyMOL commands used at each step, so students who start with Prospector
+can move on to PyMOL itself. Annotations come from UniProt, mapped to the
+structure through SIFTS [@dana2019sifts], and small molecules not in the PDB
+from PubChem [@kim2023pubchem].
 
 ![The sickle-cell mutation shown by `whatif haemoglobin B/6 V`: the original
 glutamate (left, green) and the modelled valine (right, magenta) in the beta
@@ -90,34 +86,52 @@ chain of deoxyhaemoglobin (PDB 1A3N). Prospector reports that a negative
 charge is lost and an oily side chain is placed on the protein
 surface.\label{fig:whatif}](figure_whatif.png)
 
-The code is written in Python using only the standard library, so the plugin
-installs through PyMOL's own Plugin Manager with no further dependencies. A
-pure-Python core (database clients, name resolution, ranking and caching) is
-kept separate from the PyMOL layer (commands, background worker and Qt
-panel). All network requests run in a background thread with timeouts, so
-PyMOL never freezes, and answers are cached so that a prepared class keeps
-working without a network connection. Plain-sentence requests are first
-interpreted by built-in rules; only sentences the rules cannot read are sent,
-if the user has supplied their own API key, to an optional large language
-model, whose suggested commands are checked against a fixed list before they
-run and are always shown to the user. The test suite (177 tests) runs offline
-on recorded database answers, and a further set of 385 example sentences
-checks how requests are understood.
+The repository includes a one-hour worksheet for first-year students, with
+teacher notes and an answer key. Students load deoxyhaemoglobin by name
+[@tame2000deoxy]; locate the heme pocket and measure that the proximal
+histidine is bonded to the iron (2.2 Å) while the distal histidine is not
+(4.2 Å); model the Glu6Val change of sickle-cell anaemia and relate the new
+surface hydrophobic patch to fibre formation; and compare the deoxy and oxy
+forms [@shaanan1983oxy], finding that each alpha–beta pair barely changes
+(RMSD 0.5 Å) while the whole tetramer does (2.3 Å), the quaternary change
+behind cooperative oxygen binding. Every value in the answer key was produced
+with the plugin itself.
 
-# Use in teaching
+# Software
 
-The repository includes a one-hour laboratory worksheet for first-year
-students, with teacher notes and an answer key, built around haemoglobin. In
-four parts, students load deoxyhaemoglobin by name [@tame2000deoxy], locate
-the heme pocket and measure that the proximal histidine is bonded to the iron
-(2.2 Å) while the distal histidine is not (4.2 Å); model the Glu6Val change of
-sickle-cell anaemia and relate the new surface hydrophobic patch to fibre
-formation; and compare the deoxy and oxy forms [@shaanan1983oxy], finding that
-each alpha–beta pair barely changes (RMSD 0.5 Å) while the whole tetramer does
-(2.3 Å), the quaternary change underlying cooperative oxygen binding. Every
-value in the answer key was produced with the plugin itself. The worksheet is
-designed to be adapted to other proteins, and further materials are welcome
+Prospector is written in Python using only the standard library, so it
+installs through PyMOL's own Plugin Manager with no further dependencies; it
+is designed for both the open-source and the commercial PyMOL. A pure-Python core (database
+clients, name resolution, ranking and caching) is kept separate from the
+PyMOL layer (41 commands, a background worker and a Qt panel). Network
+requests run in the background with timeouts, so PyMOL never freezes, and
+answers are cached so that a prepared class still works without a network.
+Plain sentences are first interpreted by built-in rules; only those the rules
+cannot read are sent, if the user supplies their own API key, to an optional
+large language model, whose suggested commands are checked against a fixed
+list and always shown before they run. An offline test suite of 177 tests and
+385 example sentences checks the behaviour.
+
+# Reuse and modification
+
+The worksheet is written to be adapted to other proteins: the same sequence of
+commands (`grab`, `pocket`, `measure`, `explain`, `whatif`, `compare`) works for
+any structure in the PDB. Prospector, the worksheet and its teacher notes are
+released under the MIT licence, and new teaching materials are welcome
 through the repository's contribution guidelines.
+
+# Story of the project
+
+<!-- AUTHOR: check that this paragraph describes your real reasons. -->
+Prospector began when the author, a first-year biotechnology student, wanted
+to find and understand protein structures in PyMOL without first having to
+learn its syntax. It was developed step by step: each version was used in
+PyMOL, and what was confusing to a new user was changed. For example,
+distance measurement became a deliberate two-click mode after clicks started
+measurements by accident, and the choices offered for an ambiguous name can
+now be loaded by typing their number.
+Writing and testing the haemoglobin worksheet uncovered five further problems,
+fixed before this publication.
 
 # AI usage disclosure
 
