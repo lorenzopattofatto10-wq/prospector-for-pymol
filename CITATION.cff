@@ -5,9 +5,22 @@ type: software
 authors:
   - family-names: "Pattofatto"
     given-names: "Lorenzo"
-version: "2.9.2"
+version: "2.9.3"
 date-released: "2026-11-18"
 license: MIT
+abstract: >-
+  Prospector for PyMOL is an open-source plugin for the molecular viewer PyMOL
+  that lets students find, show and explain protein structures by name. A
+  protein, gene, UniProt ID or PDB ID typed in plain words is resolved to the
+  best experimental structure, with the ranking explained. The plugin then
+  explains what is on screen (functional sites, bound molecules, disease
+  variants), recolours and redraws on request, shows mutations side by side,
+  measures and compares structures, and builds idealised models of DNA, RNA,
+  peptides, membranes and micelles alongside real biological assemblies from
+  the PDB. Plain-sentence requests are read by built-in rules, with an
+  optional AI model (the user's own Anthropic API key) for the rest. Every
+  feature is a PyMOL command and a button in a docked panel, and the PyMOL
+  commands behind each step can be shown, so the plugin also teaches PyMOL.
 repository-code: "https://github.com/lorenzopattofatto10-wq/prospector-for-pymol"
 keywords:
   - PyMOL

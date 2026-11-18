@@ -1,5 +1,11 @@
 # Changelog - Prospector for PyMOL
 
+## 2.9.3
+
+- Archived on Zenodo, so this version has a DOI and can be cited.
+- Citation file now includes a summary of what Prospector does.
+- No changes to the plugin's behaviour.
+
 ## 2.9.2 - first public release
 
 What Prospector does at this version:
