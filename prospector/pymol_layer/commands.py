@@ -13,7 +13,7 @@ from ..core import cache, card, chemcomp, http, rcsb, report, search, store, uni
 from ..core import features as feat
 from . import teach, worker
 
-VERSION = "2.9.4"
+VERSION = "2.9.5"
 _listeners = []   # panel callbacks: function(command_name, search.Result)
 
 

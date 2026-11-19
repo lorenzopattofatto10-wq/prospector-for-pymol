@@ -21,7 +21,7 @@ def main():
                 path = os.path.join(folder, name)
                 archive.write(path, os.path.relpath(path, ROOT))
                 count += 1
-        for extra in ("LICENSE", "README.md", "CHANGELOG.md"):   # credits travel with it
+        for extra in ("LICENSE", "LICENSE-docs.md", "README.md", "CHANGELOG.md"):   # credits travel with it
             path = os.path.join(ROOT, extra)
             if os.path.exists(path):
                 archive.write(path, os.path.join("prospector", extra))

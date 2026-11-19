@@ -46,4 +46,5 @@ welcome: please test every command in PyMOL before submitting.
 
 - Be kind and patient – many users are learning both biology and software.
 - Never put API keys or personal data in issues, code or tests.
-- Contributions are released under the project's [MIT licence](LICENSE).
+- Code contributions are released under the [MIT licence](LICENSE); text and
+  teaching materials under [CC BY 4.0](LICENSE-docs.md).

@@ -1,5 +1,15 @@
 # Changelog - Prospector for PyMOL
 
+## 2.9.5
+
+No change to how the plugin works. This version archives:
+
+- the paper (`paper/`), with four figures, references and an AI usage disclosure;
+- printable PDF versions of the haemoglobin worksheet and teacher notes;
+- the author's ORCID and affiliation in the citation file;
+- a CC BY 4.0 licence for the text, worksheets and figures (`LICENSE-docs.md`);
+  the software stays under the MIT licence.
+
 ## 2.9.4
 
 Found while testing the haemoglobin worksheet:

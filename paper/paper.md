@@ -139,9 +139,9 @@ surface.\label{fig:panel}](figure_panel.png)
 
 The worksheet is written to be adapted to other proteins: the same sequence of
 commands (`grab`, `pocket`, `measure`, `explain`, `whatif`, `compare`) works for
-any structure in the PDB. Prospector, the worksheet and its teacher notes are
-released under the MIT licence, and new teaching materials are welcome
-through the repository's contribution guidelines.
+any structure in the PDB. Prospector is released under the MIT licence and
+the worksheet, its teacher notes and this paper under CC BY 4.0; new teaching
+materials are welcome through the repository's contribution guidelines.
 
 # Story of the project
 
@@ -157,7 +157,7 @@ now be loaded by typing their number.
 
 - **Source code and releases:** https://github.com/lorenzopattofatto10-wq/prospector-for-pymol
 - **Archive and DOI (all versions):** https://doi.org/10.5281/zenodo.24355535
-- **Licence:** MIT (software)
+- **Licence:** MIT (software); CC BY 4.0 (text, worksheets and figures)
 - **Requirements:** PyMOL 2 or later with Python 3; no further dependencies
 - **Teaching material:** `docs/worksheets/` in the repository (student sheet, teacher notes)
 

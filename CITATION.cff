@@ -7,7 +7,7 @@ authors:
     given-names: "Lorenzo"
     orcid: "https://orcid.org/0009-0008-7977-2084"
     affiliation: "Imperial College London"
-version: "2.9.4"
+version: "2.9.5"
 doi: "10.5281/zenodo.24355535"
 identifiers:
   - type: doi
@@ -16,8 +16,10 @@ identifiers:
   - type: doi
     value: "10.5281/zenodo.24355143"
     description: "Version 2.9.3"
-date-released: "2026-11-18"
-license: MIT
+date-released: "2026-11-19"
+license:
+  - MIT
+  - CC-BY-4.0
 abstract: >-
   Prospector for PyMOL is an open-source plugin for the molecular viewer PyMOL
   that lets students find, show and explain protein structures by name. A

@@ -23,7 +23,7 @@ added for the sentences the rules do not understand (see below).
    older `prospector`.
 2. **Install New Plugin → Choose file…** and select `dist/prospector.zip`.
 3. Close PyMOL completely and open it again.
-4. The log should show `Prospector 2.9.4 loaded.` If it shows an older number,
+4. The log should show `Prospector 2.9.5 loaded.` If it shows an older number,
    the old copy is still running.
 
 Requirements: PyMOL 2.x or 3.x with Python 3.7+ (open-source or Incentive) and
@@ -407,9 +407,12 @@ and is not made or endorsed by Schrödinger.
 
 ## Licence
 
-MIT - see [LICENSE](LICENSE). You may use, change and share Prospector for PyMOL freely,
-including in teaching and commercial work, as long as the licence notice stays
-with it. To cite Prospector, use the DOI [10.5281/zenodo.24355535](https://doi.org/10.5281/zenodo.24355535),
+- **Software** (`prospector/`, `tests/`): MIT - see [LICENSE](LICENSE).
+- **Text, worksheets and figures** (`docs/`, `paper/`, the documentation):
+  CC BY 4.0 - see [LICENSE-docs.md](LICENSE-docs.md).
+
+You may use, change and share both freely, including in teaching and commercial
+work, as long as the licence notice (MIT) or credit (CC BY) stays with it. To cite Prospector, use the DOI [10.5281/zenodo.24355535](https://doi.org/10.5281/zenodo.24355535),
 which always leads to the latest version, for example:
 
 > Pattofatto, L. (2026). *Prospector for PyMOL* [Computer software]. Zenodo.
