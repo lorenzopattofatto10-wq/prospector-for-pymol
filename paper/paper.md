@@ -124,6 +124,16 @@ large language model, whose suggested commands are checked against a fixed
 list and always shown before they run. An offline test suite of 177 tests and
 385 example sentences checks the behaviour.
 
+![Prospector's panel docked inside PyMOL during the sickle-cell experiment of
+\autoref{fig:whatif}. (A) The 3D view shows the original haemoglobin (left)
+and the changed copy (right) with the same camera. (B) Requests can be typed
+as plain sentences. (C) Five tabs follow the order of a lab session: find,
+understand, look, experiment, keep. (D) The student picks the residue (B/6)
+and what it becomes (valine) from a list; the change runs at once. (E) The
+result is explained in plain words: a negative charge is lost and a
+water-avoiding side chain is placed on the protein
+surface.\label{fig:panel}](figure_panel.png)
+
 # Reuse and modification
 
 The worksheet is written to be adapted to other proteins: the same sequence of
