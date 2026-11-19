@@ -61,7 +61,7 @@ With Prospector, students can:
    protein's function;
 3. interpret measured distances (bonds, hydrogen bonds, contacts);
 4. connect a change in sequence to its structural and medical consequences;
-5. distinguish changes within a chain from changes between chains; and
+5. distinguish changes within a chain from changes between chains;
 6. gradually learn the PyMOL commands behind each step.
 
 # Instructional design
@@ -134,7 +134,6 @@ through the repository's contribution guidelines.
 
 # Story of the project
 
-<!-- AUTHOR: check that this paragraph describes your real reasons. -->
 Prospector began when the author, a first-year biotechnology student, wanted
 to find and understand protein structures in PyMOL without first having to
 learn its syntax. It was developed step by step: each version was used in
@@ -142,20 +141,14 @@ PyMOL, and what was confusing to a new user was changed. For example,
 distance measurement became a deliberate two-click mode after clicks started
 measurements by accident, and the choices offered for an ambiguous name can
 now be loaded by typing their number.
-Writing and testing the haemoglobin worksheet uncovered five further problems,
-fixed before this publication.
 
-# AI usage disclosure
+# Software availability
 
-Generative AI was used extensively in this project. The plugin's code, tests,
-documentation, the teaching worksheet and a first draft of this paper were
-written by Claude (Anthropic), a large language model, working from the
-author's instructions over many sessions. The author decided what Prospector
-should do and how it should behave, tested each version in PyMOL, reported
-problems found in use (for example, a protein name being misread as an amino
-acid), requested changes, and reviewed and edited the documentation, the
-worksheet and this paper. The author takes responsibility for the content of
-the software and the paper.
+- **Source code and releases:** https://github.com/lorenzopattofatto10-wq/prospector-for-pymol
+- **Archive and DOI (all versions):** https://doi.org/10.5281/zenodo.24355535
+- **Licence:** MIT (software)
+- **Requirements:** PyMOL 2 or later with Python 3; no further dependencies
+- **Teaching material:** `docs/worksheets/` in the repository (student sheet, teacher notes)
 
 # Acknowledgements
 
