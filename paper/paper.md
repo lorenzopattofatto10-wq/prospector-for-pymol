@@ -115,7 +115,8 @@ Prospector is written in Python using only the standard library, so it
 installs through PyMOL's own Plugin Manager with no further dependencies; it
 is designed for both the open-source and the commercial PyMOL. A pure-Python core (database
 clients, name resolution, ranking and caching) is kept separate from the
-PyMOL layer (41 commands, a background worker and a Qt panel). Network
+PyMOL layer (41 commands, a background worker and a Qt panel;
+\autoref{fig:panel}). Network
 requests run in the background with timeouts, so PyMOL never freezes, and
 answers are cached so that a prepared class still works without a network.
 Plain sentences are first interpreted by built-in rules; only those the rules
