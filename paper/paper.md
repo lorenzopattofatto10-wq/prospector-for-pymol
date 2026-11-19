@@ -161,6 +161,16 @@ now be loaded by typing their number.
 - **Requirements:** PyMOL 2 or later with Python 3; no further dependencies
 - **Teaching material:** `docs/worksheets/` in the repository (student sheet, teacher notes)
 
+# AI usage disclosure
+
+The author conceived Prospector, defined its features and behaviour, tested
+every version in PyMOL and reported the problems found in use. The code, tests,
+documentation, teaching worksheet, figures and a first draft of this paper were
+produced by a generative AI model, Claude (Anthropic), working from the
+author's instructions. The author reviewed and edited all of this material,
+checked the results against PyMOL and the source databases, and takes full
+responsibility for the software and the paper.
+
 # Acknowledgements
 
 Prospector relies on the open data and services of the RCSB Protein Data Bank,
