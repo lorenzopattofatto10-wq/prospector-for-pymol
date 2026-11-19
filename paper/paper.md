@@ -90,12 +90,24 @@ The repository includes a one-hour worksheet for first-year students, with
 teacher notes and an answer key. Students load deoxyhaemoglobin by name
 [@tame2000deoxy]; locate the heme pocket and measure that the proximal
 histidine is bonded to the iron (2.2 Å) while the distal histidine is not
-(4.2 Å); model the Glu6Val change of sickle-cell anaemia and relate the new
+(4.2 Å; \autoref{fig:pocket}); model the Glu6Val change of sickle-cell anaemia and relate the new
 surface hydrophobic patch to fibre formation; and compare the deoxy and oxy
 forms [@shaanan1983oxy], finding that each alpha–beta pair barely changes
 (RMSD 0.5 Å) while the whole tetramer does (2.3 Å), the quaternary change
-behind cooperative oxygen binding. Every value in the answer key was produced
-with the plugin itself.
+behind cooperative oxygen binding (\autoref{fig:compare}). Every value in the
+answer key was produced with the plugin itself.
+
+![The heme pocket of the alpha chain of deoxyhaemoglobin (PDB 1A3N), as
+measured with `measure A/87 to the iron` and `measure A/58 to the iron`. The
+proximal His87 is bonded to the iron (2.2 Å); the distal His58 is not
+(4.2 Å), leaving the site where oxygen binds.\label{fig:pocket}](figure_pocket.png)
+
+![Deoxy (T state, PDB 1A3N, grey) and oxy (R state, PDB 1HHO, coloured)
+haemoglobin after superimposing one alpha–beta pair (right); colour shows how
+far each residue moved. The superimposed pair barely changes (mean 0.7 Å)
+while the other pair is displaced (mean 4.9 Å): the change lies in how the
+pairs sit against each other. The oxy tetramer was rebuilt with `build
+assembly 1HHO`; the image was rendered in PyMOL.\label{fig:compare}](figure_compare.png)
 
 # Software
 
