@@ -31,6 +31,17 @@ ADDITIVES = {"HOH", "DOD", "EDO", "GOL", "PEG", "PGE", "PG4", "1PE", "P6G", "MPD
              "EPE", "MES", "BME", "DTT", "IPA", "EOH", "CIT", "TLA", "IMD", "NH4", "SCN",
              "BOG", "LDA", "UNX", "UNL"}
 
+# Detergents (and lipidic-cubic-phase lipids) used to pull membrane proteins out of
+# the membrane and crystallise them: part of the experiment, not of the protein.
+DETERGENTS = {
+    "BNG": "beta-nonylglucoside", "BOG": "beta-octylglucoside", "LDA": "LDAO",
+    "LMT": "dodecyl maltoside (DDM)", "DMU": "decyl maltoside", "UMQ": "undecyl maltoside",
+    "HTG": "heptyl thioglucoside", "C8E": "C8E4", "SDS": "sodium dodecyl sulfate",
+    "CPS": "CHAPS", "OLC": "monoolein (from crystallisation in lipid)",
+    "OLA": "oleic acid", "Y01": "cholesterol hemisuccinate", "LMN": "LMNG",
+}
+ADDITIVES |= set(DETERGENTS)
+
 PDB_ID_RE = re.compile(r"^[1-9][A-Za-z0-9]{3}$")
 
 

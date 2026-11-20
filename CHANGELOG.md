@@ -1,5 +1,21 @@
 # Changelog - Prospector for PyMOL
 
+## 2.9.6
+
+Found with `grab aquaporin`:
+
+- A family name such as "aquaporin" now gives a numbered list of its
+  best-studied members (AQP1, AqpZ, AQP3 ...) instead of quietly picking one
+  structure from a text search. Concepts such as "ribosome" still use the text
+  search.
+- After `grab`, Prospector says what on screen comes from the experiment:
+  detergents used for membrane proteins (BNG, DDM, LDAO ...), crystal water,
+  and buffer additives.
+- When the file holds only part of the working molecule (one chain of the
+  aquaporin tetramer), `grab` says so and suggests `build assembly`.
+- A protein picked from a list is called by its gene name (AQP1), not its
+  UniProt code.
+
 ## 2.9.5
 
 No change to how the plugin works. This version archives:

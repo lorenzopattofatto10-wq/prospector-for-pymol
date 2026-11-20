@@ -696,6 +696,26 @@ def _operators(expression):
     return out
 
 
+def assembly_size(pdb_id):
+    """(chains in the biological assembly, chains in the file, oligomer words), or
+    None.  One small cached request - used by grab to say "this is only part"."""
+    try:
+        data = http.request_json(rcsb.GRAPHQL_URL, {"query": _ASSEMBLY_QUERY % pdb_id},
+                                 ttl=7 * cache.DAY)
+    except http.NetworkError:
+        return None
+    entry = ((data or {}).get("data") or {}).get("entry") or {}
+    assemblies = sorted(entry.get("assemblies") or [], key=lambda a: a["rcsb_id"])
+    if not assemblies:
+        return None
+    info = assemblies[0].get("rcsb_assembly_info") or {}
+    details = assemblies[0].get("pdbx_struct_assembly") or {}
+    deposited = (entry.get("rcsb_entry_info") or {}).get(
+        "deposited_polymer_entity_instance_count") or 0
+    return (info.get("polymer_entity_instance_count") or 0, deposited,
+            details.get("oligomeric_details") or "")
+
+
 def _assembly_plan(pdb_id):
     """Worker half: what the biological assembly of an entry is, and how to show it."""
     data = http.request_json(rcsb.GRAPHQL_URL, {"query": _ASSEMBLY_QUERY % pdb_id},

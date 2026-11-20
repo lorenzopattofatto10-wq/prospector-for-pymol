@@ -13,7 +13,7 @@ from ..core import cache, card, chemcomp, http, rcsb, report, search, store, uni
 from ..core import features as feat
 from . import teach, worker
 
-VERSION = "2.9.5"
+VERSION = "2.9.6"
 _listeners = []   # panel callbacks: function(command_name, search.Result)
 
 
@@ -464,6 +464,8 @@ EXAMPLES
         try:
             if result.kind == "results":
                 path = _download_pdb(result.top.pdb_id)
+                from . import build
+                result.assembly = build.assembly_size(result.top.pdb_id)
             elif result.kind == "alphafold":
                 path = _download_model(result.model)
             elif result.kind == "molecule":
@@ -491,6 +493,11 @@ EXAMPLES
                 result.notes = [n for n in result.notes if "whole family" not in n]
             if result.mode != "id" and not generic:
                 call = result.query.text
+                protein = getattr(result, "protein", None)
+                if uniprot.ACCESSION_RE.match(call) and protein is not None and \
+                        getattr(protein, "gene", ""):
+                    call = protein.gene          # picked from a list: AQP1, not P29972
+                    _remember(protein.gene, top.pdb_id)
                 _remember(raw, top.pdb_id)
                 _remember(call, top.pdb_id)
                 _say("             From now on you can call it '%s' (or %s)."
@@ -498,6 +505,8 @@ EXAMPLES
             _say("")
             _say("ON SCREEN    the whole structure: ribbons = protein chains, sticks = "
                  "bound molecules, small crosses = water")
+            for line in _experiment_lines(top.pdb_id, getattr(result, "assembly", None)):
+                _say(line)
             _say("")
             _say("WHAT NEXT    about %s  (what it is + key places to zoom to)" % call)
             _say("             tour %s   (guided walk through it)" % call)
@@ -551,6 +560,53 @@ EXAMPLES
         _notify("grab", result)
 
     worker.submit(job, done)
+
+
+def _experiment_lines(obj, assembly):
+    """What on screen comes from the experiment rather than from the cell: detergent,
+    loose water, and a file that holds only part of the working molecule."""
+    lines = []
+    present = set()
+    try:
+        cmd.iterate("%s and not polymer and not solvent" % obj, "present.add(resn)",
+                    space={"present": present})
+    except Exception:
+        pass
+    detergents = sorted(code for code in present if code in rcsb.DETERGENTS)
+    if detergents:
+        names = ", ".join("%s (%s)" % (c, rcsb.DETERGENTS[c]) for c in detergents)
+        lines.append("FROM THE EXPERIMENT  %s: detergent used to pull this membrane protein "
+                     "out of the membrane. Not part of the protein in the cell; it sits "
+                     "roughly where the membrane would be." % names)
+    elif present and present <= rcsb.ADDITIVES:
+        lines.append("FROM THE EXPERIMENT  %s: buffer or additives from the crystal, not real "
+                     "ligands." % ", ".join(sorted(present)))
+    try:
+        water = cmd.count_atoms("%s and solvent" % obj)
+    except Exception:
+        water = 0
+    if water:
+        lines.append("WATER        %d water molecules from the crystal (the small crosses); "
+                     "some sit far from the protein. To hide them:  hide everything, "
+                     "solvent" % water)
+    if assembly and assembly[0] > assembly[1] > 0:
+        whole, part, words = assembly
+        lines.append("ONLY PART    this file holds %d of the %d chains of the working "
+                     "molecule (%s). See it whole:  build assembly %s"
+                     % (part, whole, words or "%d chains" % whole, obj))
+    if not lines:
+        return []
+    return [""] + [_wrap_line(line) for line in lines]
+
+
+def _wrap_line(line):
+    import textwrap
+    label, _, text = line.partition("  ")
+    if len(label) > 12:          # long label: text on the next lines
+        return label + "\n" + textwrap.fill(text.strip(), 78, initial_indent=" " * 13,
+                                            subsequent_indent=" " * 13)
+    return textwrap.fill(label.ljust(12) + " " + text.strip(), 78,
+                         subsequent_indent=" " * 13)
 
 
 # ----------------------------------------------------------------- molecule

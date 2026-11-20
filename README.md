@@ -23,7 +23,7 @@ added for the sentences the rules do not understand (see below).
    older `prospector`.
 2. **Install New Plugin → Choose file…** and select `dist/prospector.zip`.
 3. Close PyMOL completely and open it again.
-4. The log should show `Prospector 2.9.5 loaded.` If it shows an older number,
+4. The log should show `Prospector 2.9.6 loaded.` If it shows an older number,
    the old copy is still running.
 
 Requirements: PyMOL 2.x or 3.x with Python 3.7+ (open-source or Incentive) and

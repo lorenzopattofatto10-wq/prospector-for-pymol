@@ -7,7 +7,7 @@ Plugin > choose prospector.zip).  Then type, in the PyMOL command line:
     grab p53
     info
 """
-__version__ = "2.9.5"
+__version__ = "2.9.6"
 __license__ = "MIT"   # see LICENSE
 
 

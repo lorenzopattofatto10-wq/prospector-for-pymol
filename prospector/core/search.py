@@ -154,7 +154,14 @@ def _find(query):
         scope = filters.Query()
         scope.organism = query.organism      # compare like with like
         mentions, _ = rcsb.search_text(name, scope, rows=1)
-        if resolution.leader_count < CONCEPT_RATIO * mentions:
+        if resolution.leader_count < CONCEPT_RATIO * mentions and \
+                resolution.kind == "ambiguous" and not query.has_filters() and \
+                _family_members(name, resolution.choices) >= 2:
+            # "aquaporin": a family whose members are literally called Aquaporin-1,
+            # Aquaporin Z ...  Offer them as a list instead of picking one.
+            notes.append("'%s' names a family of proteins, so I won't pick one for you: "
+                         "these are its members with the most structures." % name)
+        elif resolution.leader_count < CONCEPT_RATIO * mentions:
             notes.append("'%s' is mentioned in %d PDB entries, but no single protein by "
                          "that name has more than %d structures, so I searched the text "
                          "of every PDB entry instead."
@@ -206,6 +213,18 @@ def _find(query):
             return result
 
     return _text_search(query, name, notes)
+
+
+def _family_members(name, groups):
+    """How many choices are named after the word itself plus a short tag:
+    'Aquaporin-1', 'Aquaporin Z', 'Myosin-7' (not 'Ribosome biogenesis protein')."""
+    pattern = re.compile(r"^%s(?:[\s-]?[a-z0-9]{1,3})?$" % re.escape(name.strip().lower()))
+    count = 0
+    for group in groups:
+        names = {p.name.lower() for p in group.members if p.name}
+        if any(pattern.match(n) for n in names):
+            count += 1
+    return count
 
 
 def _molecule_result(query, name, notes, molecule, resolution=None):

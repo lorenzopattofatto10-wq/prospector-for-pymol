@@ -7,8 +7,8 @@ authors:
     given-names: "Lorenzo"
     orcid: "https://orcid.org/0009-0008-7977-2084"
     affiliation: "Imperial College London"
-version: "2.9.5"
-date-released: "2026-11-19"
+version: "2.9.6"
+date-released: "2026-11-20"
 license: MIT
 abstract: >-
   Prospector for PyMOL is an open-source plugin for the molecular viewer PyMOL
