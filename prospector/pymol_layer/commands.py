@@ -170,6 +170,7 @@ def _raw(args, kwargs, joiner=" "):
     return joiner.join(p.strip() for p in parts if str(p).strip())
 
 
+_assembled = {}        # object -> {copied chain: original chain}, for whole assemblies
 _choices = []          # what typing 1, 2, 3 ... runs: the last numbered list
 _choice_labels = []    # and what each line was, to say what is being loaded
 
@@ -465,7 +466,7 @@ EXAMPLES
             if result.kind == "results":
                 path = _download_pdb(result.top.pdb_id)
                 from . import build
-                result.assembly = build.assembly_size(result.top.pdb_id)
+                result.whole = build.whole_molecule(result.top.pdb_id)
             elif result.kind == "alphafold":
                 path = _download_model(result.model)
             elif result.kind == "molecule":
@@ -485,7 +486,12 @@ EXAMPLES
             _say("LOADED       %s - %s" % (top.pdb_id, report._cut(top.entry.title, 58)))
             for line in report.facts(top, result):
                 _say("             " + line)
-            _load_pdb(top.pdb_id, path)
+            whole = getattr(result, "whole", None) or {}
+            _load_pdb(top.pdb_id, whole.get("path") or path)
+            if whole.get("path"):
+                from . import build
+                renamed = build._plain_chain_names(top.pdb_id)
+                _assembled[top.pdb_id] = dict((new, old.split("-")[0]) for old, new in renamed)
             call = top.pdb_id
             generic = result.query.text.lower() in ("protein", "proteins", "structure",
                                                     "structures", "anything", "any")
@@ -505,7 +511,8 @@ EXAMPLES
             _say("")
             _say("ON SCREEN    the whole structure: ribbons = protein chains, sticks = "
                  "bound molecules, small crosses = water")
-            for line in _experiment_lines(top.pdb_id, getattr(result, "assembly", None)):
+            for line in _experiment_lines(top.pdb_id, whole.get("assembly"),
+                                          assembled=bool(whole.get("path"))):
                 _say(line)
             _say("")
             _say("WHAT NEXT    about %s  (what it is + key places to zoom to)" % call)
@@ -562,41 +569,124 @@ EXAMPLES
     worker.submit(job, done)
 
 
-def _experiment_lines(obj, assembly):
-    """What on screen comes from the experiment rather than from the cell: detergent,
-    loose water, and a file that holds only part of the working molecule."""
+def _experiment_lines(obj, assembly, assembled=False):
+    """What on screen is not the protein itself, and whether the file is the whole
+    working molecule.  Works for any structure: every non-protein molecule is put
+    in one group (water, buffer, detergent, membrane lipid, sugar chain, bound
+    molecule), and anything that does not touch the protein is pointed out."""
     lines = []
-    present = set()
+    copies = {}
     try:
-        cmd.iterate("%s and not polymer and not solvent" % obj, "present.add(resn)",
-                    space={"present": present})
+        cmd.iterate("%s and not polymer and not solvent" % obj,
+                    "copies.setdefault(resn, set()).add((chain, resi))",
+                    space={"copies": copies})
     except Exception:
         pass
-    detergents = sorted(code for code in present if code in rcsb.DETERGENTS)
+
+    def names(table, codes):
+        return ", ".join("%s (%s)" % (c, table[c]) if c in table else c for c in sorted(codes))
+    detergents = {c for c in copies if c in rcsb.DETERGENTS}
+    lipids = {c for c in copies if c in rcsb.LIPIDS}
+    glycans = set()          # only sugars chemically bonded to the protein count
+    if any(c in rcsb.GLYCANS for c in copies):
+        try:
+            attached = set()
+            cmd.iterate("(%s and resn %s) and ((%s and polymer) extend 40)"
+                        % (obj, "+".join(sorted(rcsb.GLYCANS)), obj), "attached.add(resn)",
+                        space={"attached": attached})
+            glycans = attached & set(copies)
+        except Exception:
+            glycans = set()
+    ions = {c for c in copies if c in rcsb.IONS}
+    additives = {c for c in copies if c in rcsb.ADDITIVES} - detergents - ions
     if detergents:
-        names = ", ".join("%s (%s)" % (c, rcsb.DETERGENTS[c]) for c in detergents)
-        lines.append("FROM THE EXPERIMENT  %s: detergent used to pull this membrane protein "
-                     "out of the membrane. Not part of the protein in the cell; it sits "
-                     "roughly where the membrane would be." % names)
-    elif present and present <= rcsb.ADDITIVES:
-        lines.append("FROM THE EXPERIMENT  %s: buffer or additives from the crystal, not real "
-                     "ligands." % ", ".join(sorted(present)))
+        lines.append("DETERGENT    %s: used to pull this membrane protein out of the "
+                     "membrane for the experiment. Not part of the protein in the cell; "
+                     "it sits roughly where the membrane would be."
+                     % names(rcsb.DETERGENTS, detergents))
+    if lipids:
+        lines.append("LIPIDS       %s: membrane lipids that stayed stuck to the protein "
+                     "(from the cell membrane, a nanodisc or the experiment). They mark "
+                     "where the membrane is." % names(rcsb.LIPIDS, lipids))
+    if glycans:
+        lines.append("SUGARS       %s: sugar chains attached to the protein's surface "
+                     "(glycosylation) - real, made by the cell." % ", ".join(sorted(glycans)))
+    if additives:
+        lines.append("ADDITIVES    %s: buffer or cryo-protectant from the experiment, not "
+                     "real ligands." % ", ".join(sorted(additives)))
+    if ions:
+        lines.append("IONS         %s: simple ions. Some are part of how the protein works "
+                     "(K+ inside a potassium channel), others are salt from the solution "
+                     "- check where they sit:  pocket %s %s"
+                     % (", ".join(sorted(ions)), obj, sorted(ions)[0]))
+    # anything (except water) that does not touch the protein at all
+    loose = 0
+    for code, places in copies.items():
+        for chain, resi in places:
+            number = ("\\" + resi) if resi.startswith("-") else resi
+            sel = "%s and resn %s and resi %s" % (obj, code, number)
+            if chain:
+                sel += " and chain %s" % chain
+            try:
+                if not cmd.count_atoms("(%s and polymer) within 4.5 of (%s)" % (obj, sel)):
+                    loose += 1
+            except Exception:
+                pass
+    if loose:
+        lines.append("NOT TOUCHING  %d of these molecule%s %s not touch the protein, so %s "
+                     "seem%s to float: %s held by a part of the protein the experiment "
+                     "could not see, or by a neighbouring molecule in the crystal."
+                     % (loose, "" if loose == 1 else "s", "does" if loose == 1 else "do",
+                        "it" if loose == 1 else "they", "s" if loose == 1 else "",
+                        "it is" if loose == 1 else "they are"))
     try:
-        water = cmd.count_atoms("%s and solvent" % obj)
+        water = cmd.count_atoms("%s and solvent and not elem H" % obj)
+        far = cmd.count_atoms("(%s and solvent and not elem H) and not ((%s and polymer) "
+                              "around 3.5)" % (obj, obj)) if water else 0
     except Exception:
-        water = 0
+        water, far = 0, 0
     if water:
-        lines.append("WATER        %d water molecules from the crystal (the small crosses); "
-                     "some sit far from the protein. To hide them:  hide everything, "
-                     "solvent" % water)
-    if assembly and assembly[0] > assembly[1] > 0:
-        whole, part, words = assembly
-        lines.append("ONLY PART    this file holds %d of the %d chains of the working "
-                     "molecule (%s). See it whole:  build assembly %s"
-                     % (part, whole, words or "%d chains" % whole, obj))
+        lines.append("WATER        %d water molecule%s from the experiment (the small "
+                     "crosses)%s. To hide them:  hide everything, solvent"
+                     % (water, "" if water == 1 else "s",
+                        "; %d do%s not touch the protein" % (far, "es" if far == 1 else "")
+                        if far else ""))
+    if assembly:
+        whole, part, words = assembly[0], assembly[1], assembly[2] or ""
+        kind = words or "%d chains" % whole
+        if assembled:
+            lines.append("WHOLE MOLECULE  The PDB file holds %d of the %d chains of the "
+                         "working molecule (%s); this is the complete molecule, rebuilt "
+                         "from the PDB's assembly data. The file alone:  fetch %s"
+                         % (part, whole, kind, obj))
+        elif whole > part > 0:
+            lines.append("ONLY PART    this file holds %d of the %d chains of the working "
+                         "molecule (%s), which is too big to show atom by atom. A coarse "
+                         "view of all of it:  build assembly %s" % (part, whole, kind, obj))
+        elif part > whole > 0:
+            lines.append("COPIES       the file holds %d chains, but the working molecule "
+                         "has %d (%s): the others are neighbours packed next to it in "
+                         "the crystal." % (part, whole, kind))
     if not lines:
         return []
     return [""] + [_wrap_line(line) for line in lines]
+
+
+def _with_copies(text, obj):
+    """An entry card for a whole assembly: say which chains on screen are copies."""
+    copies = _assembled.get((obj or "").upper()) or {}
+    if not text or not copies or "WHOLE MOLECULE ON SCREEN" in text:
+        return text
+    by_original = {}
+    for new, old in sorted(copies.items()):
+        by_original.setdefault(old, []).append(new)
+    pairs = "; ".join("%s are copies of %s" % (", ".join(new), old) if len(new) > 1
+                      else "%s is a copy of %s" % (new[0], old)
+                      for old, new in sorted(by_original.items()))
+    note = (" WHOLE MOLECULE ON SCREEN: chains %s - rebuilt from the PDB's assembly "
+            "data (the file itself holds only the chains listed above).\n\n" % pairs)
+    marker = " LIGANDS"
+    return text.replace(marker, note + marker, 1) if marker in text else text + "\n" + note
 
 
 def _wrap_line(line):
@@ -950,7 +1040,10 @@ def _fetch_query(query, strict=False):
     try:
         if result.kind == "results":
             top = result.top
+            from . import build
+            whole = build.whole_molecule(top.pdb_id)
             return {"error": None, "identity": ("pdb", top.pdb_id), "name": top.pdb_id,
+                    "whole": whole,
                     "query": query, "text": result.query.text,
                     "path": _download_pdb(top.pdb_id), "model": None,
                     "line": "Loaded the best match for '%s':  %s - %s"
@@ -988,7 +1081,16 @@ def _place_fetched(fetched):
         _remember(fetched["molecule"].title(), name)
     elif name not in cmd.get_names("objects"):
         _snapshot("loading %s" % name, allow_empty=True)
-        cmd.load(fetched["path"], name)
+        whole = fetched.get("whole") or {}
+        cmd.load(whole.get("path") or fetched["path"], name)
+        if whole.get("path"):
+            from . import build
+            renamed = build._plain_chain_names(name)
+            _assembled[name] = dict((new, old.split("-")[0]) for old, new in renamed)
+            size = whole["assembly"]
+            fetched["line"] += ("\n             The file holds %d of the %d chains; the whole "
+                                "molecule (%s) was loaded." % (size[1], size[0],
+                                                              size[2] or "assembly"))
     _objects[name] = fetched["identity"]
     _remember(fetched["query"], name)
     _remember(fetched["text"], name)
@@ -1092,7 +1194,7 @@ EXAMPLES
         _header("about %s" % (obj or raw or identity[1]))
         if query.get("fetched"):
             obj = _place_fetched(query["fetched"])
-        _say(text)
+        _say(_with_copies(text, obj))
         if obj and _is_molecule(obj):
             _say("")
             _say("WHAT NEXT    viewas %s spheres  (its real bulk)  |  viewas %s sticks  |  "
@@ -1194,7 +1296,11 @@ EXAMPLES
                     return None, pending["fetched"]["error"]
                 identity = pending["fetched"]["identity"]
             if identity[0] == "pdb":
-                return feat.annotate(identity[1], wanted), None
+                from . import places
+                found = feat.annotate(identity[1], wanted)
+                copies = _assembled.get(identity[1].upper()) or {}
+                return (places._onto_copies(found, copies) if found is not None and copies
+                        else found), None
             return feat.annotate_model(identity[1], wanted), None
         except feat.FeatureError as err:
             return None, str(err)

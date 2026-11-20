@@ -42,6 +42,26 @@ DETERGENTS = {
 }
 ADDITIVES |= set(DETERGENTS)
 
+# Simple ions: sometimes part of how the protein works (K+ in a potassium channel),
+# sometimes just salt from the solution - never called "not real".
+IONS = {"NA", "K", "CL", "BR", "IOD", "NH4", "LI", "RB", "CS", "F"}
+
+# Membrane lipids and sterols that come with membrane proteins (from the cell
+# membrane, a nanodisc or the lipid used for crystallisation).
+LIPIDS = {
+    "CLR": "cholesterol", "PLM": "palmitic acid", "STE": "stearic acid",
+    "MYR": "myristic acid", "OLA": "oleic acid", "POV": "POPC", "PCW": "DOPC",
+    "PEE": "DOPE", "PC1": "phosphatidylcholine", "PTY": "phosphatidylethanolamine",
+    "3PE": "phosphatidylethanolamine", "CDL": "cardiolipin", "LHG": "phosphatidylglycerol",
+    "PGW": "phosphatidylglycerol", "PEF": "phosphatidylethanolamine", "LPP": "phosphatidic acid",
+    "D10": "decane", "HEX": "hexane", "OCT": "octane", "R16": "hexadecane",
+    "LMG": "galactolipid", "DGD": "galactolipid", "SQD": "sulfolipid",
+    "PCF": "phosphatidylcholine", "P5S": "phosphatidylserine", "PIO": "phosphatidylinositol",
+}
+# Sugars that form the sugar chains attached to many proteins (glycosylation).
+GLYCANS = {"NAG", "NDG", "MAN", "BMA", "FUC", "FUL", "GAL", "GLA", "SIA", "BGC", "GLC",
+           "XYS", "A2G", "NGA"}
+
 PDB_ID_RE = re.compile(r"^[1-9][A-Za-z0-9]{3}$")
 
 

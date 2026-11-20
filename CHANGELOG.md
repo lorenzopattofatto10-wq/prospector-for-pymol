@@ -2,19 +2,27 @@
 
 ## 2.9.6
 
-Found with `grab aquaporin`:
+Found with `grab aquaporin`, then tested on 25 structures of every kind (enzymes,
+channels, receptors, glycoproteins, a virus shell, ferritin, chaperonins):
 
-- A family name such as "aquaporin" now gives a numbered list of its
-  best-studied members (AQP1, AqpZ, AQP3 ...) instead of quietly picking one
-  structure from a text search. Concepts such as "ribosome" still use the text
-  search.
-- After `grab`, Prospector says what on screen comes from the experiment:
-  detergents used for membrane proteins (BNG, DDM, LDAO ...), crystal water,
-  and buffer additives.
-- When the file holds only part of the working molecule (one chain of the
-  aquaporin tetramer), `grab` says so and suggests `build assembly`.
-- A protein picked from a list is called by its gene name (AQP1), not its
-  UniProt code.
+- **The whole molecule, always.** When a PDB file holds only part of the working
+  molecule (one chain of the aquaporin tetramer, one of the 60 of a virus shell),
+  every command that loads a structure now loads the PDB's assembly instead and
+  says so. The first copy keeps its chain names; the copies get the next free
+  letters and share its UniProt annotations (features, explain, tour). PyMOL's own
+  `fetch` still loads a file exactly as it is.
+- **Everything that is not protein is explained**, for any structure: water,
+  buffer and cryo-protectant, simple ions (which may be functional, like K+ in a
+  potassium channel), detergents, membrane lipids, sugar chains (only when
+  chemically bonded to the protein), and molecules that do not touch the protein.
+  A file that holds extra copies packed in the crystal is pointed out too.
+- **Family names give a list.** "aquaporin" now lists AQP1, AqpZ, AQP3 ...
+  instead of quietly picking one structure; concepts such as "ribosome" still use
+  the text search. A protein picked from a list is called by its gene name.
+- **`build` tolerates typos:** `build asembly` works, and typing 8Y80 (zero) while
+  8Y8O (letter O) is on screen uses the one on screen. Its help is laid out
+  cleanly.
+- Worksheet question 16 uses `fetch 1HHO, oxy_half` for the half-molecule file.
 
 ## 2.9.5
 

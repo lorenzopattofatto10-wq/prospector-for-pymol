@@ -532,6 +532,27 @@ EXAMPLES
     worker.submit(job, done, before)
 
 
+def _onto_copies(annotation, copies):
+    """A whole assembly: chains C, D ... are copies of A, B ... - give them the same
+    UniProt mapping and features (on a copy, so the cached annotation is untouched)."""
+    import copy
+    annotation = copy.deepcopy(annotation)
+    by_original = {}
+    for new, old in copies.items():
+        by_original.setdefault(old, []).append(new)
+    for protein in annotation.proteins:
+        for chain_map in list(protein.chains):
+            for new in by_original.get(chain_map.chain, []):
+                twin = copy.copy(chain_map)
+                twin.chain = new
+                protein.chains.append(twin)
+        for feature in protein.features:
+            for old, labels in list(feature.placed.items()):
+                for new in by_original.get(old, []):
+                    feature.placed[new] = list(labels)
+    return annotation
+
+
 def fetch_annotation(identity):
     """(annotation or None, ligand names) for an object identity; never raises."""
     if identity is None or identity[0] in ("mol", "built"):
@@ -541,6 +562,9 @@ def fetch_annotation(identity):
         if identity[0] == "pdb":
             names = rcsb.ligand_names(rcsb.entry_detail(identity[1]))
             annotation = feat.annotate(identity[1])
+            copies = base._assembled.get(identity[1].upper()) or {}
+            if annotation is not None and copies:
+                annotation = _onto_copies(annotation, copies)
         else:
             annotation = feat.annotate_model(identity[1])
     except (feat.FeatureError, http.NetworkError):

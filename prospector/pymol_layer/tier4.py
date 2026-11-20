@@ -158,7 +158,11 @@ EXAMPLES
                 detail = rcsb.entry_detail(identity[1])
                 info["names"] = rcsb.ligand_names(detail)
                 info["title"] = ((detail or {}).get("struct") or {}).get("title") or ""
-                info["annotation"] = feat.annotate(identity[1])
+                from . import places
+                found = feat.annotate(identity[1])
+                copies = base._assembled.get(identity[1].upper()) or {}
+                info["annotation"] = (places._onto_copies(found, copies)
+                                      if found is not None and copies else found)
             else:
                 info["annotation"] = feat.annotate_model(identity[1])
         except feat.FeatureError:

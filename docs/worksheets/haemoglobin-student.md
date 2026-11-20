@@ -6,7 +6,7 @@ You will load the real 3D structure of human haemoglobin, find where oxygen
 binds, see how one changed amino acid causes sickle-cell anaemia, and compare
 haemoglobin without oxygen and with it.
 
-**You need:** PyMOL (open-source or Incentive) with Prospector 2.9.4 or later installed
+**You need:** PyMOL (open-source or Incentive) with Prospector 2.9.6 or later installed
 ([download](https://github.com/lorenzopattofatto10-wq/prospector-for-pymol/releases/latest)),
 and an internet connection.
 
@@ -173,13 +173,17 @@ only half of it.
 
     ______________________________________________________________
 
-16. Try comparing just **one** pair of chains (alpha + beta):
+16. Try comparing just **one** pair of chains (alpha + beta). The file 1HHO on
+    its own holds only one alpha and one beta chain; PyMOL's own `fetch`
+    command loads a file exactly as it is (Prospector would rebuild the whole
+    molecule):
 
     ```
-    compare haemoglobin with 1HHO
+    fetch 1HHO, oxy_half
+    compare haemoglobin with oxy_half
     ```
 
-    (1HHO on its own contains only one alpha and one beta chain.) Is the RMSD
+    Is the RMSD
     larger or smaller than in question 15? What does that tell you about
     *where* the change between the two forms happens – inside each chain, or in
     how the chains sit against each other?

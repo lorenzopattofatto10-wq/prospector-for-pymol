@@ -19,7 +19,9 @@ For the student sheet [haemoglobin-student.md](haemoglobin-student.md).
 `~/.prospector`, so the class still works if the network is slow. The AI
 feature is not needed for this lab.
 
-The values below were obtained with Prospector 2.9.4 (the lab needs 2.9.4 or later). A later PDB release could
+The values below were obtained with Prospector 2.9.6 (the lab needs 2.9.6 or later:
+since 2.9.6, Prospector loads the whole molecule, so question 16 uses PyMOL's own
+`fetch` to load the half-molecule file). A later PDB release could
 make Prospector pick a different haemoglobin entry in Part 1; if so, have
 students type `grab 1A3N` so the numbers match.
 
@@ -87,7 +89,8 @@ students type `grab 1A3N` so the numbers match.
 15. Whole tetramer: **RMSD 2.32 Å** ("same fold with local differences"). The
     biggest differences are at **His146 of both beta chains (8.1 and 7.7 Å)**,
     Asp94β, Lys95β and Tyr145β – the C-terminus of the beta chain.
-16. One alpha–beta pair only (1A3N vs 1HHO): **RMSD 0.54 Å**, "essentially the
+16. One alpha–beta pair only (1A3N vs the bare 1HHO file, loaded with PyMOL's
+    `fetch 1HHO, oxy_half`): **RMSD 0.54 Å**, "essentially the
     same conformation". So each chain – and each alpha–beta pair – hardly
     changes; the T→R transition is mainly a **rotation of one alpha–beta pair
     relative to the other** (about 15°): a change in **quaternary** structure.

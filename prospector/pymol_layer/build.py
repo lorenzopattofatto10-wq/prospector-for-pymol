@@ -713,10 +713,53 @@ def assembly_size(pdb_id):
     deposited = (entry.get("rcsb_entry_info") or {}).get(
         "deposited_polymer_entity_instance_count") or 0
     return (info.get("polymer_entity_instance_count") or 0, deposited,
-            details.get("oligomeric_details") or "")
+            details.get("oligomeric_details") or "", info.get("atom_count") or 0,
+            assemblies[0]["rcsb_id"].split("-")[-1])
+
+
+def whole_molecule(pdb_id):
+    """Worker half, used whenever a PDB entry is loaded: when the file holds only
+    part of the working molecule (one chain of a tetramer), download the PDB's
+    assembly file instead.  Returns {"assembly": (...) or None, "path": path of the
+    assembly file or None}."""
+    size = assembly_size(pdb_id)
+    out = {"assembly": size, "path": None}
+    if size and size[0] > size[1] > 0 and 0 < size[3] <= MAX_ASSEMBLY_ATOMS \
+            and size[0] <= 62:
+        target = os.path.join(cache.structures_dir(), "%s-assembly%s.cif" % (pdb_id, size[4]))
+        try:
+            out["path"] = http.download("https://files.rcsb.org/download/%s-assembly%s.cif"
+                                        % (pdb_id, size[4]), target)
+        except http.NetworkError:
+            out["path"] = None           # fall back to the file as deposited
+    return out
+
+
+def _id_variants(pdb_id):
+    """8Y80 -> 8Y8O and back: the letter O and the digit 0 look alike."""
+    out = []
+    for index in range(1, len(pdb_id)):
+        swap = {"0": "O", "O": "0"}.get(pdb_id[index])
+        if swap:
+            out.append(pdb_id[:index] + swap + pdb_id[index + 1:])
+    return out
 
 
 def _assembly_plan(pdb_id):
+    """Worker half: what the biological assembly of an entry is - trying the
+    letter O for the digit 0 (and back) if the entry does not exist."""
+    plan = _assembly_plan_exact(pdb_id)
+    if (plan.get("error") or "").startswith("The PDB has no entry"):
+        for other in _id_variants(pdb_id):
+            alternative = _assembly_plan_exact(other)
+            if not alternative.get("error"):
+                alternative["note"] = ("There is no entry %s; I used %s (the letter O and "
+                                       "the digit 0 look alike)." % (pdb_id, other))
+                return alternative
+    return plan
+
+
+def _assembly_plan_exact(pdb_id):
     """Worker half: what the biological assembly of an entry is, and how to show it."""
     data = http.request_json(rcsb.GRAPHQL_URL, {"query": _ASSEMBLY_QUERY % pdb_id},
                              ttl=7 * cache.DAY)
@@ -821,9 +864,10 @@ def _coarse(plan, name):
 
 
 def _plain_chain_names(obj):
-    """Assembly files call the copies A, B, A-2, B-2 ...  Rename them A, B, C, D
-    (in file order) so that chains look - and compare - like a normal entry.
-    Returns [(old, new)], empty when nothing was renamed (or over 26 chains)."""
+    """Assembly files call the copies A, B, A-2, B-2 ...  The first copy keeps its
+    chain names (so UniProt annotations still match); the other copies get the next
+    free letters (C, D ...), so chains look - and compare - like a normal entry.
+    Returns [(old, new)], empty when nothing was renamed."""
     order = []
     cmd.iterate(obj, "order.append(chain) if not order or order[-1] != chain else None",
                 space={"order": order})
@@ -831,7 +875,7 @@ def _plain_chain_names(obj):
     for chain in order:
         if chain not in chains:
             chains.append(chain)
-    if not any("-" in c for c in chains) or len(chains) > 26:
+    if not any("-" in c for c in chains) or len(chains) > 62:
         return []
     bases = []
     for chain in chains:
@@ -842,8 +886,16 @@ def _plain_chain_names(obj):
         base_name, _, number = chain.partition("-")
         return (int(number) if number.isdigit() else 1, bases.index(base_name))
     chains.sort(key=copy_order)
-    letters = [chr(ord("A") + i) for i in range(len(chains))]
-    mapping = dict(zip(chains, letters))
+    pool = [chr(c) for c in range(ord("A"), ord("Z") + 1)] + \
+        [chr(c) for c in range(ord("a"), ord("z") + 1)] + [str(d) for d in range(10)]
+    keep = [c for c in chains if "-" not in c]
+    free = [c for c in pool if c not in keep]
+    mapping = dict((c, c) for c in keep)
+    for chain in chains:
+        if chain not in mapping:
+            if not free:
+                return []
+            mapping[chain] = free.pop(0)
     cmd.alter(obj, "chain = segi = mapping.get(chain, chain)", space={"mapping": mapping})
     cmd.sort(obj)
     return [(old, mapping[old]) for old in chains if old != mapping[old]]
@@ -863,6 +915,17 @@ def _assembly(words, label):
             state["pdb"] = identity[1]
         elif text and rcsb.looks_like_pdb_id(text):
             state["pdb"] = text.upper()
+            # 8Y80 typed while 8Y8O is on screen: the letter O and the digit 0 look
+            # alike, and both can be real entries - use the one on screen
+            loaded = set(n.upper() for n in cmd.get_names("objects"))
+            if state["pdb"] not in loaded:
+                for other in _id_variants(state["pdb"]):
+                    if other in loaded:
+                        state["note"] = ("%s is on screen, so I used it (you typed %s: "
+                                         "the letter O and the digit 0 look alike)."
+                                         % (other, state["pdb"]))
+                        state["pdb"] = other
+                        break
         elif text:
             state["query"] = text
         else:
@@ -908,8 +971,18 @@ def _assembly(words, label):
             _say(plan["error"])
             _say(report.LINE)
             return
+        for note in (state.get("note"), plan.get("note")):
+            if note:
+                _say("Note: " + note)
         pdb_id = plan["pdb"]
         name = "%s_assembly" % pdb_id
+        if pdb_id in base._assembled and pdb_id in cmd.get_names("objects"):
+            _say("ALREADY WHOLE  %s on screen already is the complete molecule (%s, %d "
+                 "chains): it was loaded from the PDB's assembly data."
+                 % (pdb_id, plan["oligomer"] or "assembly", plan["chains"]))
+            cmd.zoom(pdb_id)
+            _say(report.LINE)
+            return
         base._snapshot(label, allow_empty=True)
         if name in cmd.get_names("objects"):
             cmd.delete(name)
@@ -1046,6 +1119,13 @@ EXAMPLES
             if word.lower() in _KINDS:
                 kind, rest = _KINDS[word.lower()], words[:index] + words[index + 1:]
                 break
+    if words and kind is None:
+        # a typo of a kind: "build asembly 1J4N", "build membrain popc"
+        import difflib
+        close = difflib.get_close_matches(words[0].lower(), sorted(_KINDS), n=1, cutoff=0.75)
+        if close:
+            kind, rest = _KINDS[close[0]], words[1:]
+            _say("Reading '%s' as '%s'." % (words[0], close[0]))
     if kind == "assembly":
         _assembly([w for w in rest if w.lower() not in ("unit", "assembly")], label)
         return
@@ -1057,8 +1137,15 @@ EXAMPLES
             if words:
                 _say("I don't know how to build '%s'." % " ".join(words))
             _say("WHAT I CAN BUILD")
+            import textwrap
             for example, what in _MENU:
-                _say("   %-38s %s" % (example, what))
+                if len(example) > 30:        # long example: description underneath
+                    _say("   " + example)
+                    _say(textwrap.fill(what, 78, initial_indent=" " * 34,
+                                       subsequent_indent=" " * 34))
+                else:
+                    _say(textwrap.fill(what, 78, initial_indent="   %-30s " % example,
+                                       subsequent_indent=" " * 34))
             _say("Models built from rules are labelled IDEALISED MODEL; assemblies come "
                  "from real PDB data.")
             _say(report.LINE)
