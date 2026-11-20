@@ -654,11 +654,17 @@ def _experiment_lines(obj, assembly, assembled=False):
     if assembly:
         whole, part, words = assembly[0], assembly[1], assembly[2] or ""
         kind = words or "%d chains" % whole
-        if assembled:
+        if assembled and whole > part:
             lines.append("WHOLE MOLECULE  The PDB file holds %d of the %d chains of the "
                          "working molecule (%s); this is the complete molecule, rebuilt "
-                         "from the PDB's assembly data. The file alone:  fetch %s"
-                         % (part, whole, kind, obj))
+                         "from the PDB's assembly data. Other views:  unit %s one  (a "
+                         "single chain)  |  unit %s file  (exactly the PDB file)"
+                         % (part, whole, kind, obj, obj))
+        elif assembled and whole < part:
+            lines.append("WORKING MOLECULE  The PDB file holds %d chains: copies packed "
+                         "side by side in the crystal. The molecule works as %s (%d "
+                         "chain%s), so that is what is shown. Everything in the file:  "
+                         "unit %s file" % (part, kind, whole, "" if whole == 1 else "s", obj))
         elif whole > part > 0:
             lines.append("ONLY PART    this file holds %d of the %d chains of the working "
                          "molecule (%s), which is too big to show atom by atom. A coarse "
@@ -697,6 +703,164 @@ def _wrap_line(line):
                                             subsequent_indent=" " * 13)
     return textwrap.fill(label.ljust(12) + " " + text.strip(), 78,
                          subsequent_indent=" " * 13)
+
+
+# --------------------------------------------------------------------- unit
+_UNIT_WORDS = {
+    "whole": "whole", "all": "whole", "complex": "whole", "assembly": "whole",
+    "oligomer": "whole", "biological": "whole", "working": "whole", "complete": "whole",
+    "dimer": "whole", "trimer": "whole", "tetramer": "whole", "pentamer": "whole",
+    "hexamer": "whole", "multimer": "whole", "back": "whole", "normal": "whole",
+    "one": "one", "single": "one", "monomer": "one", "chain": "one", "subunit": "one",
+    "protomer": "one", "alone": "one", "1": "one",
+    "file": "file", "deposited": "file", "crystal": "file", "raw": "file",
+    "asymmetric": "file", "pdb": "file",
+}
+
+
+def unit(*args, **kwargs):
+    """
+DESCRIPTION
+
+    Choose how much of a structure to see:
+      whole  the working molecule as it exists in the cell (the default after grab):
+             all 4 chains of the aquaporin tetramer, one copy of a kinase that
+             works alone
+      one    a single chain (one aquaporin monomer)
+      file   exactly what is in the PDB file, including copies that only sit side
+             by side in the crystal
+
+USAGE
+
+    unit [structure] whole|one|file
+
+EXAMPLES
+
+    unit one
+    unit aquaporin whole
+    unit 1AKE file
+    """
+    words = _raw(args, kwargs).split()
+    label = "unit %s" % " ".join(words)
+    mode = None
+    rest = []
+    for word in words:
+        key = word.lower().strip(".,")
+        if mode is None and key in _UNIT_WORDS:
+            mode = _UNIT_WORDS[key]
+        elif key not in ("the", "a", "an", "as", "show", "view", "see", "of", "only", "just"):
+            rest.append(word)
+    target = " ".join(rest)
+    state = {}
+
+    def before():
+        obj, message = _pick_object(target, "unit")
+        main = _main_of(obj) if obj else None
+        if main is None:
+            _header(label)
+            _say(message or "Load a structure first, e.g.  grab aquaporin")
+            _say(report.LINE)
+            return False
+        if _objects.get(main, ("",))[0] != "pdb":
+            _header(label)
+            _say("unit works on PDB structures; %s is %s." % (
+                main, {"af": "an AlphaFold model (always one chain)",
+                       "mol": "a small molecule", "built": "a built model"}.get(
+                           _objects.get(main, ("?",))[0], "not one")))
+            _say(report.LINE)
+            return False
+        state["main"] = main
+        state["mode"] = mode or "whole"
+        if state["mode"] == "file" and main in _assembled and \
+                "%s_file" % main not in cmd.get_names("objects"):
+            state["download"] = True          # only when the screen is not the file
+        return True
+
+    def job():
+        if state.get("download"):
+            try:
+                state["path"] = _download_pdb(state["main"])
+            except http.NetworkError as err:
+                state["error"] = _network_message(err)
+
+    def done(_result, error):
+        if error:
+            return _unexpected(error)
+        _header(label)
+        if state.get("error"):
+            _say(state["error"])
+            _say(report.LINE)
+            return
+        _show_unit(state["main"], state["mode"], state.get("path"))
+        _say(report.LINE)
+
+    worker.submit(job, done, before)
+
+
+def _main_of(obj):
+    """1AKE_one / 1AKE_file -> 1AKE."""
+    if obj is None:
+        return None
+    for suffix in ("_one", "_file"):
+        if obj.endswith(suffix) and obj[:-len(suffix)] in cmd.get_names("objects"):
+            return obj[:-len(suffix)]
+    return obj
+
+
+def _show_unit(main, mode, path=None):
+    names = cmd.get_names("objects")
+    one, raw = "%s_one" % main, "%s_file" % main
+    _snapshot("unit %s %s" % (main, mode))
+    for name in (main, one, raw):
+        if name in names:
+            cmd.disable(name)
+    chains = cmd.get_chains("%s and polymer" % main)
+    if mode == "one":
+        if len(chains) <= 1:
+            cmd.enable(main)
+            _say("%s is already a single chain (chain %s)." % (main, chains[0] if chains else "-"))
+            return
+        first = chains[0]
+        if one not in names:
+            cmd.create(one, "%s and (chain %s or (not polymer and not solvent and "
+                            "(chain %s within 5 of (%s and chain %s and polymer))))"
+                       % (main, first, first, main, first))
+            _objects[one] = _objects.get(main, ("pdb", main))
+        cmd.enable(one)
+        cmd.zoom(one)
+        _last[0] = one
+        _say("NOW SHOWING  one chain: chain %s of %s, with the molecules bound to it"
+             % (first, main))
+        _say("             (object %s; the whole molecule is hidden, not deleted)" % one)
+        teach.note("create %s, %s and chain %s" % (one, main, first),
+                   "copy one chain into its own object")
+        teach.note("disable %s" % main, "hide the whole molecule (it stays loaded)")
+    elif mode == "file":
+        if main not in _assembled:
+            cmd.enable(main)
+            _last[0] = main
+            _say("%s on screen already is exactly the PDB file: the file holds the whole "
+                 "working molecule." % main)
+            return
+        if raw not in names:
+            cmd.load(path, raw)
+            _objects[raw] = _objects.get(main, ("pdb", main))
+        cmd.enable(raw)
+        cmd.zoom(raw)
+        _last[0] = raw
+        _say("NOW SHOWING  exactly the PDB file of %s: %d chain%s" % (
+            main, len(cmd.get_chains("%s and polymer" % raw)),
+            "" if len(cmd.get_chains("%s and polymer" % raw)) == 1 else "s"))
+        _say("             (object %s). Copies that only sit side by side in the crystal "
+             "are included; missing parts of a complex are not." % raw)
+        teach.note("fetch %s, %s" % (main, raw), "load the PDB file exactly as deposited")
+    else:
+        cmd.enable(main)
+        cmd.zoom(main)
+        _last[0] = main
+        _say("NOW SHOWING  the working molecule of %s: %d chain%s, as it exists in the cell"
+             % (main, len(chains), "" if len(chains) == 1 else "s"))
+    _say("OTHER VIEWS  unit %s whole  |  unit %s one  |  unit %s file" % (main, main, main))
 
 
 # ----------------------------------------------------------------- molecule
@@ -1088,9 +1252,15 @@ def _place_fetched(fetched):
             renamed = build._plain_chain_names(name)
             _assembled[name] = dict((new, old.split("-")[0]) for old, new in renamed)
             size = whole["assembly"]
-            fetched["line"] += ("\n             The file holds %d of the %d chains; the whole "
-                                "molecule (%s) was loaded." % (size[1], size[0],
-                                                              size[2] or "assembly"))
+            if size[0] > size[1]:
+                fetched["line"] += ("\n             The file holds %d of the %d chains; the "
+                                    "whole molecule (%s) was loaded." % (size[1], size[0],
+                                                                        size[2] or "assembly"))
+            else:
+                fetched["line"] += ("\n             The file holds %d copies packed in the "
+                                    "crystal; the working molecule (%s, %d chain%s) was "
+                                    "loaded." % (size[1], size[2] or "assembly", size[0],
+                                                 "" if size[0] == 1 else "s"))
     _objects[name] = fetched["identity"]
     _remember(fetched["query"], name)
     _remember(fetched["text"], name)
@@ -1723,6 +1893,7 @@ _HELP = """Prospector %s - work with protein structures by name
 
  CHANGE THE PICTURE
    viewas <style>          lines, sticks, ballstick, spheres, cartoon, surface
+   unit whole|one|file     the whole molecule, one chain, or exactly the PDB file
    look <preset>           colour schemes: chains, rainbow, hydrophobicity ...
    back                    go back one step (back 3 = three steps)
    clear                   empty the 3D window (back restores it); clear text
@@ -1912,6 +2083,7 @@ _dock = [None]
 def register():
     """Register every command with PyMOL (plain name and p_ alias)."""
     commands = {"find": find, "grab": grab, "alphafold": alphafold, "about": about,
+                "unit": unit,
                 "features": features, "pocket": pocket, "prospector": prospector, "more": more, "molecule": molecule,
                 "info": info}
     for name, function in commands.items():

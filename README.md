@@ -192,6 +192,7 @@ rest of the protein does not adjust.
 
 | Command | What it does |
 |---|---|
+| `unit whole\|one\|file` | How much of the structure to see. `grab` always shows the **whole** working molecule (all 4 chains of the aquaporin tetramer, but only one copy of a kinase that works alone, even if the crystal held two). `unit one` shows a single chain; `unit file` shows exactly what the PDB file holds. Also in the panel (Look tab) and in `ask` ("show the monomer"). |
 | `viewas <style>` | How it is drawn: `lines`, `sticks`, `ballstick`, `spheres`, `cartoon`, `ribbon`, `tube`, `surface`, `mesh`, `dots`. Combine with `+`. |
 | `look <preset>` | Colour schemes: `publication`, `chains`, `rainbow`, `secondary` (helix/strand/loop), `types` (kind of amino acid), `elements`, `hydrophobicity`, `putty`, `ligand`. |
 | `back`, `back 3` | Goes back one step, or several (up to 10): restores the picture and removes what the step added (a loaded structure, a measurement, a changed copy, a selection). |

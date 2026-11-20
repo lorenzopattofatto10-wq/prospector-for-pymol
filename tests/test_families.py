@@ -70,7 +70,7 @@ class ExperimentLines(unittest.TestCase):
                                                             assembled=True))
         self.assertIn("WHOLE MOLECULE", rebuilt)
         self.assertIn("this is the complete molecule", rebuilt)
-        self.assertIn("fetch memb", rebuilt)
+        self.assertIn("unit memb file", rebuilt)
 
     def test_nothing_to_say_for_a_plain_complete_protein(self):
         self.assertEqual(self.commands._experiment_lines("memb", (1, 1, "monomeric")), [])
@@ -129,3 +129,56 @@ class WholeMolecule(unittest.TestCase):
     def test_letter_o_and_digit_zero(self):
         self.assertEqual(self.build._id_variants("8Y80"), ["8Y8O"])
         self.assertIn("1HH0", self.build._id_variants("1HHO"))
+
+
+class UnitViews(unittest.TestCase):
+    def setUp(self):
+        from prospector.pymol_layer import commands
+        self.commands = commands
+        self.home = tempfile.mkdtemp(prefix="prospector-test-")
+        cache.set_home(self.home)
+        http.transport = fixture_transport.unplugged
+        commands.register()
+        cmd.delete("all")
+        commands._objects.clear()
+        for chain in ("A", "B", "C", "D"):
+            cmd.fab("MKHACDEFG", "part", chain=chain)
+            cmd.create("TET", "TET or part" if "TET" in cmd.get_names() else "part")
+            cmd.delete("part")
+        commands._objects["TET"] = ("pdb", "TET")
+        commands._last[0] = "TET"
+
+    def tearDown(self):
+        http.transport = http._urllib_transport
+        cmd.delete("all")
+        self.commands._assembled.pop("TET", None)
+        cache.set_home(None)
+        shutil.rmtree(self.home, ignore_errors=True)
+
+    def run_line(self, line):
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            cmd.do(line, echo=0)
+        return buffer.getvalue()
+
+    def test_one_chain_and_back(self):
+        out = self.run_line("unit one")
+        self.assertIn("one chain: chain A of TET", out)
+        self.assertEqual(cmd.get_names("objects", enabled_only=1), ["TET_one"])
+        self.assertEqual(cmd.get_chains("TET_one"), ["A"])
+        out = self.run_line("unit whole")
+        self.assertIn("4 chains", out)
+        self.assertEqual(cmd.get_names("objects", enabled_only=1), ["TET"])
+
+    def test_file_view_when_the_file_is_already_whole(self):
+        out = " ".join(self.run_line("unit TET file").split())
+        self.assertIn("already is exactly the PDB file", out)
+
+    def test_sentences(self):
+        from prospector.pymol_layer import ask
+        for text, want in (("show the monomer", "unit one"), ("just one chain", "unit one"),
+                           ("back to the tetramer", "unit whole"),
+                           ("show the pdb file as it is", "unit file")):
+            self.assertEqual(ask._interpret(text)[0], want, text)
+        self.assertEqual(ask._interpret("show the whole ferritin cage")[0],
+                         "build assembly ferritin")

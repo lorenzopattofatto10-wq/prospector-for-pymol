@@ -724,8 +724,10 @@ def whole_molecule(pdb_id):
     assembly file or None}."""
     size = assembly_size(pdb_id)
     out = {"assembly": size, "path": None}
-    if size and size[0] > size[1] > 0 and 0 < size[3] <= MAX_ASSEMBLY_ATOMS \
-            and size[0] <= 62:
+    # load the assembly when the file holds less (one chain of a tetramer) or more
+    # (two copies packed side by side in the crystal) than the working molecule
+    if size and size[0] > 0 and size[1] > 0 and size[0] != size[1] and \
+            0 < size[3] <= MAX_ASSEMBLY_ATOMS and size[0] <= 62:
         target = os.path.join(cache.structures_dir(), "%s-assembly%s.cif" % (pdb_id, size[4]))
         try:
             out["path"] = http.download("https://files.rcsb.org/download/%s-assembly%s.cif"

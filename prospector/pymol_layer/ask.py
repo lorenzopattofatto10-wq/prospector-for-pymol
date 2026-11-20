@@ -738,6 +738,11 @@ _C = {
     "show": "side chain chains sidechain sidechains draw as in with surface cartoon "
             "ribbon ribbons sticks stick lines line spheres sphere balls ball mesh dots "
             "dot view",
+    "unit": "show me the a an only just one single chain subunit monomer monomeric copy "
+            "protomer whole complete full entire complex tetramer tetrameric dimer trimer "
+            "pentamer hexamer oligomer molecule protein assembly view see it as in exactly "
+            "raw deposited pdb file crystal copies asymmetric unit back to again "
+            "working biological all chains of instead please is was how looks stored",
     "zoom": "zoom focus go to", "delete": "delete remove unload close measurement "
             "measurements distance distances dashed line lines last",
 }
@@ -897,6 +902,36 @@ def _interpret(text):
     return command, description
 
 
+_UNIT_TALK = set("show me the a an only just one single chain subunit monomer monomeric "
+                 "copy protomer whole complete full entire complex tetramer tetrameric dimer "
+                 "trimer pentamer hexamer oligomer molecule protein assembly view see it "
+                 "as in exactly raw deposited pdb file crystal copies asymmetric "
+                 "unit back to again working biological all chains of instead please "
+                 "can you i want would like display go is was how looks stored "
+                 "deposited".split())
+
+
+def _unit_request(raw):
+    """'show the monomer', 'just one chain', 'back to the tetramer', 'show the pdb
+    file as it is' - about the structure on screen (no other name in the sentence)."""
+    words = re.findall(r"[a-z0-9]+", raw)
+    if not words or any(w not in _UNIT_TALK for w in words):
+        return None               # another word - maybe a protein's name: not for unit
+    text = " " + " ".join(words) + " "
+    if re.search(r" (raw|deposited|asymmetric|crystal copies|exactly)\b", text) \
+            or re.search(r"\b(pdb )?file\b", text):
+        return "unit file", "show exactly what is in the PDB file"
+    if re.search(r"\b(monomer|monomeric|subunit|protomer)\b", text) or \
+            re.search(r"\b(one|single) (chain|copy|subunit)\b", text):
+        return "unit one", "show a single chain"
+    if re.search(r"\b(whole|complete|full|entire|working|biological)\b.*\b(complex|"
+                 r"molecule|protein|assembly|oligomer|unit|thing)\b", text) or \
+            re.search(r"\b(tetramer|tetrameric|dimer|trimer|pentamer|hexamer|oligomer|"
+                      r"all (the )?chains)\b", text):
+        return "unit whole", "show the working molecule (all its chains)"
+    return None
+
+
 def _rules(text):
     """The rule chain itself: one request -> (command, description) or (None, None)."""
     normal = _normalize(text)
@@ -917,6 +952,9 @@ def _rules(text):
     match = re.match(r"^ (?:select|choose|pick|make a selection of|selection of) (.+) $", raw)
     if match:
         return "choose %s" % match.group(1).strip(), "select that and show PyMOL's own line"
+    unit = _unit_request(raw)
+    if unit:
+        return unit
     built = _build_request(text, raw)
     if built:
         return built

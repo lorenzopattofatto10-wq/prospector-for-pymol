@@ -390,6 +390,16 @@ class Panel(QtWidgets.QDialog):
         self.choose_box = field("histidines within 5 of the zinc", 250)
         choose_action = lambda: self.run_with("choose %s in {name}", self.choose_box.text())
         self.choose_box.returnPressed.connect(choose_action)
+        self.units = QtWidgets.QComboBox()
+        for label, value in (("the whole molecule, as in the cell", "whole"),
+                             ("one chain only", "one"),
+                             ("exactly the PDB file", "file")):
+            self.units.addItem(label, value)
+        self.units.setToolTip("whole = all the chains that work together (an aquaporin "
+                              "tetramer); one = a single chain; file = exactly what the "
+                              "PDB file holds, crystal copies included")
+        unit_action = lambda: self.run_tool("unit", after=self.units.currentData())
+        self.units.activated.connect(lambda *ignored: unit_action())
         style_action = lambda: self.run_tool("viewas", after=self.styles.currentData())
         preset_action = lambda: self.run_tool("look %s" % self.presets.currentData())
         scout_action = lambda: self.run_with("scout {name} %s", self.scout_box.currentText())
@@ -398,6 +408,9 @@ class Panel(QtWidgets.QDialog):
         self.presets.activated.connect(lambda *ignored: preset_action())
         self.scout_box.activated.connect(lambda *ignored: scout_action())
         look_page = page(
+            ("How much of it", [self.units, make_button("Apply again", unit_action)],
+             "Pick from the list - it changes at once. The whole molecule (e.g. all 4 "
+             "chains of aquaporin), one chain, or exactly what the PDB file holds."),
             ("Draw it as", [self.styles, make_button("Apply again", style_action)],
              "Pick from the list - the view changes at once. How the atoms are drawn: "
              "ribbon, sticks, balls, surface ..."),

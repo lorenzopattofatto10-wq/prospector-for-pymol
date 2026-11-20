@@ -5,10 +5,14 @@
 Found with `grab aquaporin`, then tested on 25 structures of every kind (enzymes,
 channels, receptors, glycoproteins, a virus shell, ferritin, chaperonins):
 
-- **The whole molecule, always.** When a PDB file holds only part of the working
+- **The working molecule, always.** When a PDB file holds only part of the working
   molecule (one chain of the aquaporin tetramer, one of the 60 of a virus shell),
-  every command that loads a structure now loads the PDB's assembly instead and
-  says so. The first copy keeps its chain names; the copies get the next free
+  or extra copies that only sit side by side in the crystal (two copies of a
+  kinase that works alone), every command that loads a structure now loads the
+  PDB's assembly instead and says so.
+- **New command `unit whole|one|file`** (also in the panel's Look tab and in `ask`:
+  "show the monomer", "back to the tetramer"): switch between the working
+  molecule, a single chain, and exactly what the PDB file holds. The first copy keeps its chain names; the copies get the next free
   letters and share its UniProt annotations (features, explain, tour). PyMOL's own
   `fetch` still loads a file exactly as it is.
 - **Everything that is not protein is explained**, for any structure: water,
