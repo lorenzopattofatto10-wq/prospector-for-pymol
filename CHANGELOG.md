@@ -1,5 +1,40 @@
 # Changelog - Prospector for PyMOL
 
+## 2.9.7
+
+- **New command `piece`: part of a structure as a separate object.** `piece A 19-40`,
+  `piece chymotrypsinogen A/19-20`, `piece residues 19 to 40 of chain A`,
+  `piece chain B`, several ranges (`piece A 19-20 30-40`), PyMOL's own
+  `/4CHA//B/40-60`, and an optional colour (`piece A 19-40 red`). The new object
+  (e.g. `4CHA_B19-40`) appears in PyMOL's object list and can be coloured, hidden
+  or shown on its own; the original keeps every atom (the residues are only hidden
+  there, so they are not drawn twice). Short pieces are drawn as sticks. A missing
+  chain or residue range is named together with the ones that exist; numbers that
+  exist only in UniProt's numbering are converted, and a difference between the
+  file's numbers and UniProt's is pointed out. Also in the panel (Look tab,
+  **Separate part**) and in `ask` ("make residues 19 to 40 of chain A a separate
+  object"). `back` removes it.
+- **Every big family gives a choice.** `grab kinase`, `protease`, `phosphatase`,
+  `GPCR`, `ion channel`, `potassium channel`, `transporter`, `ABC transporter`,
+  `ATPase`, `nuclear receptor`, `collagen`, `keratin`, `tubulin`, `actin`,
+  `histone`, `immunoglobulin`, `heat shock protein`, `chaperone`, `globin`,
+  `interleukin`, `interferon`, `ubiquitin ligase`, `dehydrogenase`, `synthase`,
+  `reductase` and others used to load one structure from a text search (or, for
+  GPCR, a plant protein that happens to share the abbreviation). They now list
+  the best-studied members - human ones first, most structures first - and a
+  number loads one. Members are proteins whose name the word heads, proteins
+  UniProt files in that family, or (where that makes a far better list) proteins
+  with that UniProt keyword. Lists that already existed lost proteins that only
+  mention the word (Pannexin-1 under caspase, CD47 under integrin).
+- Complexes load a structure of the whole complex: `nucleosome` and `spliceosome`
+  no longer offer a list of their parts. New textbook entries: the yeast
+  spliceosome (3JB9) and photosystems I and II (1JB0, 3WU2).
+- Unchanged on purpose: single proteins (`haemoglobin`, `p53`, `GFP`, `ubiquitin`)
+  load at once, `insulin` and `lysozyme` still ask which one, searches with a filter
+  (`grab kinase ligand=STI`) load the best match, and `antibody` and `zinc
+  finger` (parts shared by thousands of unrelated proteins) still search the text.
+- `info` fits the console again (one line was wrapping).
+
 ## 2.9.6
 
 Found with `grab aquaporin`, then tested on 25 structures of every kind (enzymes,

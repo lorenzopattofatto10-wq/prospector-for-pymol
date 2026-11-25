@@ -932,6 +932,56 @@ def _unit_request(raw):
     return None
 
 
+_PIECE_ASK = (r"\b(separate|own|new|independent|individual|distinct) (object|objects|piece|"
+              r"part|entity|model)\b|\b(extract|split (off|out)|cut out|isolate|pull "
+              r"out|carve out|break out|copy)\b")
+_PIECE_WORDS = set("make turn put split extract cut out isolate pull carve break copy into "
+                   "as a an its own new separate independent individual distinct object "
+                   "objects piece part parts entity model residue residues res amino acid "
+                   "acids from to through until and of in the chain chains only just "
+                   "please can you i want would like could numbers number positions "
+                   "position colour color coloured colored it them that this with "
+                   "off".split())
+_PIECE_COLOURS = set("red blue green yellow orange magenta cyan purple pink white grey "
+                     "gray black salmon wheat violet".split())
+_COVER["piece"] = _PIECE_WORDS | _PIECE_COLOURS
+
+
+def _piece_request(raw):
+    """'make residues 19 to 40 of chain A a separate object', 'extract chain B',
+    'put chain B in its own object' -> piece."""
+    if not re.search(_PIECE_ASK, raw):
+        return None
+    text = re.sub(r"(-?\d+[a-z]?)\s*(?:-|\.\.|\bto\b|\bthrough\b|\buntil\b)\s*(-?\d+[a-z]?)\b",
+                  r"\1-\2", raw)
+    chains = []
+    for match in re.finditer(r"\bchains? ([a-z0-9])((?:\s*(?:,|and)\s*[a-z0-9]\b)*)", text):
+        chains.append(match.group(1))
+        chains += re.findall(r"\b([a-z0-9])\b", match.group(2))
+    text = re.sub(r"\bchains? [a-z0-9]((?:\s*(?:,|and)\s*[a-z0-9]\b)*)", " ", text)
+    ranges = re.findall(r"(?<![a-z0-9/])(-?\d+[a-z]?(?:-\d+[a-z]?)?)(?![a-z0-9])", text)
+    if not chains and not ranges:
+        return None
+    colour = ""
+    found = re.search(r"\b(%s)\b" % "|".join(sorted(_PIECE_COLOURS)), text)
+    if found:
+        colour = found.group(1)
+    rest = [w for w in re.findall(r"[a-z0-9][a-z0-9\-\.']*", text)
+            if w not in _PIECE_WORDS and w not in _STOP and w != colour
+            and not re.match(r"^-?\d+[a-z]?(-\d+[a-z]?)?$", w)]
+    name = " ".join(rest)
+    if name:
+        _named.append(name)
+    if ranges and len(chains) <= 1:
+        where = " ".join("%s/%s" % (chains[0].upper(), r) if chains else r for r in ranges)
+    elif ranges:
+        return None                    # ranges and several chains: too unclear
+    else:
+        where = " ".join("chain %s" % c.upper() for c in chains)
+    command = " ".join(("piece %s %s %s" % (name, where, colour)).split())
+    return command, "make that part a separate object (it appears in the object list)"
+
+
 def _rules(text):
     """The rule chain itself: one request -> (command, description) or (None, None)."""
     normal = _normalize(text)
@@ -949,6 +999,9 @@ def _rules(text):
                  r"what commands|actual commands|commands (you|u) used?)\b", raw):
         return "prospector teach on", "show the PyMOL commands behind every action"
 
+    piece = _piece_request(raw)
+    if piece:
+        return piece
     match = re.match(r"^ (?:select|choose|pick|make a selection of|selection of) (.+) $", raw)
     if match:
         return "choose %s" % match.group(1).strip(), "select that and show PyMOL's own line"

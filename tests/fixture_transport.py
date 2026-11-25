@@ -21,6 +21,10 @@ QUERIES = [
     "haemoglobin organism=horse limit=3",
     "4hhb",
     "p53 res<0.5",
+    "kinase",
+    "GPCR",
+    "globin",
+    "nucleosome",
 ]
 
 
@@ -63,7 +67,8 @@ def recording(url, body, headers, timeout):
                 json.dump({"url": url, "status": error.status, "headers": {},
                            "text": ""}, handle)
         raise
-    keep = dict((k, v) for k, v in reply_headers.items() if k == "x-total-results")
+    keep = dict((k, v) for k, v in reply_headers.items()
+                if k in ("x-total-results", "link"))
     record = {"url": url, "status": status, "headers": keep,
               "text": raw.decode("utf-8", "replace")}
     os.makedirs(FIXTURES, exist_ok=True)

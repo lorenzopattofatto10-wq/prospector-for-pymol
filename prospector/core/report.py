@@ -221,8 +221,12 @@ def render(result, command_name="find"):
     elif result.kind == "ambiguous":
         resolution = result.resolution
         out.append("")
-        out.append("'%s' could mean several different proteins. I won't guess - "
-                   "pick one\nand run the command on its right:" % resolution.name)
+        if getattr(resolution, "family", False):
+            out.append("'%s' is a family of many proteins. Its best-studied members - "
+                       "pick one\nand run the command on its right:" % resolution.name)
+        else:
+            out.append("'%s' could mean several different proteins. I won't guess - "
+                       "pick one\nand run the command on its right:" % resolution.name)
         out.append("")
         filters_text = " ".join(query.filter_words())
         for index, group in enumerate(resolution.choices, 1):
@@ -300,6 +304,7 @@ def render(result, command_name="find"):
     if result.kind in ("results", "ambiguous") and result.mode != "id" and query \
             and query.kind == "auto" and not query.has_filters() \
             and (result.resolution is None or result.resolution.top_tier < 3) \
+            and not getattr(result.resolution, "family", False) \
             and " " not in query.text.strip():
         # a name no protein owns outright could also be a small molecule
         out.append("MOLECULE?    if you meant the small molecule of that name:  "
