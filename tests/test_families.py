@@ -10,7 +10,7 @@ from contextlib import redirect_stdout
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from pymol import cmd                                          # noqa: E402
-from prospector.core import cache, http, rcsb, search          # noqa: E402
+from prospector.core import cache, http, rcsb, report, resolve, search  # noqa: E402
 from tests import fixture_transport                            # noqa: E402
 
 
@@ -35,10 +35,88 @@ class Families(unittest.TestCase):
         self.assertEqual(search._family_members("myosin", [_Group("Myosin-7"),
                                                            _Group("Myosin-9")]), 2)
 
+    def test_a_family_word_must_head_the_name(self):
+        heads = resolve._heads
+        self.assertTrue(heads("Caspase-3", "caspase"))
+        self.assertTrue(heads("Tubulin alpha-1B chain", "tubulin"))
+        self.assertTrue(heads("Actin, cytoplasmic 1", "actin"))
+        self.assertTrue(heads("Histone H3.1", "histone"))
+        self.assertTrue(heads("Cyclin-dependent kinase 2", "kinase"))
+        self.assertTrue(heads("G protein-coupled receptor 151", "G protein-coupled receptor"))
+        self.assertTrue(heads("Dihydroorotate dehydrogenase (quinone), mitochondrial",
+                              "dehydrogenase"))
+        self.assertFalse(heads("Cyclin-dependent kinase 2", "cyclin"))
+        self.assertFalse(heads("Histone deacetylase 1", "histone"))
+        self.assertFalse(heads("Nuclear receptor coactivator 2", "nuclear receptor"))
+        self.assertFalse(heads("Glycogen synthase kinase-3 beta", "synthase"))
+        self.assertFalse(heads("dTDP-glucose 4,6-dehydratase", "glucose"))
+
+    def test_how_a_protein_belongs_to_a_family(self):
+        class Entry(object):
+            name, families, keywords = "Adenosine receptor A2a", [], []
+        receptor = Entry()
+        phrases = resolve.family_phrases("GPCR")
+        self.assertEqual(phrases, ["G protein-coupled receptor"])
+        self.assertIsNone(resolve.family_member(receptor, phrases))
+        receptor.families = ["Belongs to the G-protein coupled receptor 1 family"]
+        self.assertEqual(resolve.family_member(receptor, phrases), "family")
+        receptor.families, receptor.keywords = [], ["G-protein coupled receptor"]
+        self.assertEqual(resolve.family_member(receptor, phrases), "keyword")
+        self.assertEqual(resolve.family("ribosome"), [])        # a complex, not a family
+        self.assertEqual(resolve.family("zinc finger"), [])     # a part of many proteins
+        self.assertEqual(resolve.family("ubiquitin"), [])       # one protein, four genes
+
     def test_detergents_are_known_additives(self):
         for code in ("BNG", "BOG", "LDA", "LMT"):
             self.assertIn(code, rcsb.DETERGENTS)
             self.assertIn(code, rcsb.ADDITIVES)
+
+
+class FamilyLists(unittest.TestCase):
+    """Recorded answers: a family name gives a list, a protein loads, a filter loads."""
+
+    def setUp(self):
+        self.home = tempfile.mkdtemp(prefix="prospector-test-")
+        cache.set_home(self.home)
+        http.transport = fixture_transport.replaying
+
+    def tearDown(self):
+        http.transport = http._urllib_transport
+        cache.set_home(None)
+        shutil.rmtree(self.home, ignore_errors=True)
+
+    def members(self, result):
+        return [g.lead.gene for g in result.resolution.choices]
+
+    def test_family_names_give_their_best_studied_members(self):
+        kinase = search.find("kinase")
+        self.assertEqual(kinase.kind, "ambiguous")
+        self.assertTrue(kinase.resolution.family)
+        self.assertEqual(self.members(kinase)[0], "CDK2")
+        text = report.render(kinase, "grab")
+        self.assertIn("'kinase' is a family of many proteins", text)
+        self.assertIn("grab CDK2", text)
+        self.assertIn("find kinase mode=text", text)
+        self.assertNotIn("molecule kinase", text)
+        self.assertEqual(report.choices(kinase)[0], "grab P24941")
+        gpcr = search.find("GPCR")                     # not the plant protein GCR2
+        self.assertEqual(gpcr.kind, "ambiguous")
+        self.assertIn("ADORA2A", self.members(gpcr))
+        self.assertIn("ADRB2", self.members(gpcr))
+        globin = search.find("globin")                 # few human globins: all organisms
+        self.assertEqual(globin.kind, "ambiguous")
+        self.assertIn("MB", self.members(globin))
+        self.assertIn("all organisms", " ".join(globin.notes))
+
+    def test_proteins_complexes_and_filters_still_load(self):
+        self.assertEqual(search.find("hemoglobin").kind, "results")
+        self.assertEqual(search.find("p53").kind, "results")
+        filtered = search.find("kinase ligand=STI")
+        self.assertEqual(filtered.kind, "results")
+        self.assertIn("STI", filtered.top.entry.ligands)
+        nucleosome = search.find("nucleosome")
+        self.assertEqual(nucleosome.kind, "results")
+        self.assertEqual(nucleosome.top.pdb_id, "1KX5")
 
 
 class ExperimentLines(unittest.TestCase):

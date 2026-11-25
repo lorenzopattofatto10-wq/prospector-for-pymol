@@ -13,7 +13,7 @@ from ..core import cache, card, chemcomp, http, rcsb, report, search, store, uni
 from ..core import features as feat
 from . import teach, worker
 
-VERSION = "2.9.6"
+VERSION = "2.9.7"
 _listeners = []   # panel callbacks: function(command_name, search.Result)
 
 
@@ -47,7 +47,7 @@ def _say(text):
 # line, then only the answer is printed;  more  shows the rest.
 _SHORTENED = set("grab alphafold focus scout pocket features whatif mutate measure compare "
                  "viewas look tour next prev back clear snap report surprise batch "
-                 "molecule choose".split())
+                 "molecule choose piece".split())
 _KEEP_ALWAYS = ("NOTE", "CAUTION", "WARNING", "CHECK")
 _KEEP_NEVER = ("MOUSE", "GO BACK", "WHAT NEXT", "WHEN DONE", "GO CLOSER", "Tip", "FILE",
                "OPEN LATER", "THE COMMAND")
@@ -1857,8 +1857,7 @@ _HELP = """Prospector %s - work with protein structures by name
 
  NEW HERE?
    start                   first steps and how to use the mouse
-   ask <anything>          say it in your own words, e.g.
-                           ask where does the drug bind in p53
+   ask <anything>          in your own words, e.g. ask where does the drug bind
    askai <anything>        the same, but straight to the AI (needs a key)
    status                  what is loaded and how it is drawn right now
    glossary <word>         what a term means (RMSD, resolution, chain ...)
@@ -1867,9 +1866,8 @@ _HELP = """Prospector %s - work with protein structures by name
    grab <name>             find the best structure and load it
    find <name>             only list the candidates (pick=2 loads row 2)
    alphafold <name>        the predicted model, when no experiment exists
-   molecule <name>         a small molecule on its own: cholesterol, ATP, caffeine
-   build <what> ...        make a model: dna, rna, helix, sheet, membrane, micelle,
-                           or the whole biological assembly of a protein
+   molecule <name>         a small molecule alone: cholesterol, ATP, caffeine
+   build <what> ...        make a model: dna, helix, membrane, assembly ...
    batch <file.txt>        load a list of names
    surprise                a random classic structure
 
@@ -1894,6 +1892,7 @@ _HELP = """Prospector %s - work with protein structures by name
  CHANGE THE PICTURE
    viewas <style>          lines, sticks, ballstick, spheres, cartoon, surface
    unit whole|one|file     the whole molecule, one chain, or exactly the PDB file
+   piece A 19-40           make a part its own object, to colour or hide alone
    look <preset>           colour schemes: chains, rainbow, hydrophobicity ...
    back                    go back one step (back 3 = three steps)
    clear                   empty the 3D window (back restores it); clear text
@@ -1916,8 +1915,7 @@ _HELP = """Prospector %s - work with protein structures by name
    info filters            narrowing a search: organism=human res<2.0 ...
    prospector panel        the same things as buttons
 
- <name> is a protein name (p53), a PDB ID (4HHB), or nothing at all for the
- structure you are working on."""
+ <name>: a protein name (p53), a PDB ID (4HHB), or nothing for the one on screen."""
 
 _FILTER_HELP = """FILTERS  narrow down  find  and  grab . Add them after the name,
 separated by spaces:
@@ -2112,6 +2110,8 @@ def register():
     choose.register()
     from . import build
     build.register()
+    from . import piece
+    piece.register()
     ask.register()
     _tidy_everything()
     worker.init()

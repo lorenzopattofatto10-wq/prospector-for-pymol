@@ -23,7 +23,7 @@ added for the sentences the rules do not understand (see below).
    older `prospector`.
 2. **Install New Plugin → Choose file…** and select `dist/prospector.zip`.
 3. Close PyMOL completely and open it again.
-4. The log should show `Prospector 2.9.6 loaded.` If it shows an older number,
+4. The log should show `Prospector 2.9.7 loaded.` If it shows an older number,
    the old copy is still running.
 
 Requirements: PyMOL 2.x or 3.x with Python 3.7+ (open-source or Incentive) and
@@ -98,6 +98,19 @@ Filters go after the name, separated by spaces:
 **Numbered lists:** after any numbered list (`grab myosin` when the name could
 mean several proteins, or the ranked table of `find hemoglobin`), just type the
 number - `1`, `2`, `3` ... - to load that line.
+
+**Family names give a choice.** A name that covers a whole family - `kinase`,
+`protease`, `GPCR`, `ion channel`, `histone`, `heat shock protein`, `globin` ... -
+loads nothing. It lists the family's best-studied members (human ones, most
+structures first; all organisms when few human members have structures), and you
+type a number to load one. A protein counts as a member when the word heads its
+name (Caspase-3, Tubulin alpha-1B, not Cyclin-dependent kinase for `cyclin`), or
+UniProt files it in that family, or - for words UniProt rarely puts in names, such
+as protease or ion channel - gives it that keyword. Complexes (`ribosome`,
+`nucleosome`, `spliceosome`, `proteasome`, `photosystem`) load a structure of the
+whole complex; single proteins (`haemoglobin`, `p53`, `GFP`) load at once; a search
+with a filter (`grab kinase ligand=STI`) loads the best match; `mode=text`
+searches the text of every entry.
 | `mode=text` | `find ribosome mode=text` | search the text of all entries |
 | `kind=` | `find cholesterol kind=protein`, `kind=molecule` | insist on proteins, or on the small molecule |
 
@@ -193,6 +206,7 @@ rest of the protein does not adjust.
 | Command | What it does |
 |---|---|
 | `unit whole\|one\|file` | How much of the structure to see. `grab` always shows the **whole** working molecule (all 4 chains of the aquaporin tetramer, but only one copy of a kinase that works alone, even if the crystal held two). `unit one` shows a single chain; `unit file` shows exactly what the PDB file holds. Also in the panel (Look tab) and in `ask` ("show the monomer"). |
+| `piece <chain> [from-to ...] [colour]` | Makes part of a structure a **separate object**, which appears in PyMOL's object list on the right and can be coloured, hidden or shown on its own: `piece A 19-40`, `piece chymotrypsinogen A/19-20`, `piece residues 19 to 40 of chain A`, `piece chain B`, `piece A 19-20 30-40 red`, or PyMOL's own `/4CHA//B/40-60`. The new object is named after what it holds (`4CHA_B19-40`); the original keeps every atom (those residues are only hidden there, so they are not drawn twice). Missing chains or residues are named, with the ones that exist; numbers that only exist in UniProt's numbering are converted, and a difference between the file's numbers and UniProt's is pointed out. Also in the panel (Look tab, **Separate part**) and in `ask` ("make residues 19 to 40 of chain A a separate object"). `back` removes it. |
 | `viewas <style>` | How it is drawn: `lines`, `sticks`, `ballstick`, `spheres`, `cartoon`, `ribbon`, `tube`, `surface`, `mesh`, `dots`. Combine with `+`. |
 | `look <preset>` | Colour schemes: `publication`, `chains`, `rainbow`, `secondary` (helix/strand/loop), `types` (kind of amino acid), `elements`, `hydrophobicity`, `putty`, `ligand`. |
 | `back`, `back 3` | Goes back one step, or several (up to 10): restores the picture and removes what the step added (a loaded structure, a measurement, a changed copy, a selection). |
@@ -289,8 +303,8 @@ Each structure gets up to 100 points:
 | Recency | 5 | released this year |
 
 Structures on a hand-curated list of about 80 textbook entries (marked `*`) get
-8 bonus points. When a name is a whole class (`kinase`, `ribosome`) the
-textbook structures of that class are listed first. The weights live in
+8 bonus points. When a name is searched as text (`ribosome`, or any name with
+`mode=text`) the textbook structures of that kind are listed first. The weights live in
 `prospector/core/rank.py`.
 
 ## Limits worth knowing

@@ -76,6 +76,15 @@ class Protein(object):
             self._read_names(part, top=False)
         if not self.name:
             self.name = self.entry_name
+        # only present when asked for (FAMILY_FIELDS): what UniProt files it under
+        self.keywords = [k.get("name", "") for k in record.get("keywords", []) or []]
+        self.families = []
+        for comment in record.get("comments", []) or []:
+            if comment.get("commentType") == "SIMILARITY":
+                for text in comment.get("texts", []) or []:
+                    self.families.extend(part.strip() for part in
+                                         re.split(r"\.\s*", text.get("value", ""))
+                                         if part.strip())
 
         self.pdb = {}
         for xref in record.get("uniProtKBCrossReferences", []) or []:
@@ -174,6 +183,35 @@ def search_words(words, organism=None, size=25):
     query = " AND ".join("(protein_name:%s)" % _escape(w) for w in words)
     query = "(%s) AND (reviewed:true)%s" % (query, organism_clause(organism))
     return _run(query, size)
+
+
+FAMILY_FIELDS = FIELDS + ",keyword,protein_families"
+
+
+def search_family(phrases, organism=None, size=500, pages=2):
+    """Reviewed proteins with a 3D structure whose name, UniProt keyword or
+    protein family mentions any of ``phrases`` ("kinase", "G protein-coupled
+    receptor").  Loose on purpose: resolve.family_member decides who belongs.
+    Up to ``pages`` pages of ``size`` proteins."""
+    parts = []
+    for phrase in phrases:
+        safe = _escape(phrase)
+        parts.extend(['(protein_name:"%s")' % safe, '(keyword:"%s")' % safe,
+                      '(family:"%s")' % safe])
+    query = "(%s) AND (reviewed:true) AND (structure_3d:true)%s" % (
+        " OR ".join(parts), organism_clause(organism))
+    url = BASE + "?" + urllib.parse.urlencode({"query": query, "fields": FAMILY_FIELDS,
+                                               "size": size})
+    found = Found()
+    for _ in range(pages):
+        data, link = http.request_json(url, ttl=7 * cache.DAY, header="link")
+        found.extend(Protein(record) for record in (data or {}).get("results", []))
+        following = re.search(r'<([^>]+)>;\s*rel="next"', link or "")
+        if not following:
+            break
+        url = following.group(1)
+    found.total = len(found)
+    return found
 
 
 def by_accession(accession):

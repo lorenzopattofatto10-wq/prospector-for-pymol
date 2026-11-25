@@ -434,7 +434,7 @@ def ask(sentence, reference, context, key=None, model_name=None, timeout=TIMEOUT
 PROSPECTOR_COMMANDS = (
     "grab", "find", "alphafold", "molecule", "about", "tour", "next", "prev", "focus", "explain",
     "sequence", "features", "pocket", "scout", "whatif", "mutate", "measure", "compare",
-    "similar", "viewas", "look", "choose", "build", "back", "clear", "snap", "session", "report", "history",
+    "similar", "viewas", "look", "choose", "build", "piece", "back", "clear", "snap", "session", "report", "history",
     "fav", "quiz", "surprise", "status", "start", "glossary", "info")
 # PyMOL's own commands the AI may run: they only change how things are drawn.
 PYMOL_COMMANDS = ("hide", "show", "color", "set", "rock", "distance", "zoom", "orient",

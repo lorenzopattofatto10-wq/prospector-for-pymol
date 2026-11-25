@@ -145,7 +145,18 @@ def _find(query):
         resolution = resolve.Resolution("broad", name)
     else:
         resolution = resolve.resolve(name, query.organism)
+    early_notes = list(notes)            # how the query was read, before any search
+    first = resolution
     notes.extend(resolution.notes)
+
+    key = " ".join(re.findall(r"[a-z0-9]+", name.lower()))
+    if key in resolve.COMPLEXES and resolution.kind == "ambiguous" and \
+            not query.has_filters():
+        # "nucleosome": one machine built from many proteins - its structures are
+        # found by the word, not by choosing one of its parts
+        notes.append("'%s' is a complex of several proteins, so I searched for "
+                     "structures of the whole complex." % name)
+        resolution = resolve.Resolution("broad", name)
 
     # A loose name match with very few structures, for a word that appears in
     # thousands of PDB entries, is a concept ("ribosome"), not one protein.
@@ -192,6 +203,35 @@ def _find(query):
                 molecule = other
         if molecule is not None:
             return _molecule_result(query, name, spelling_notes, molecule, resolution)
+
+    # A word that names a whole family ("kinase", "GPCR", "globin"): list its
+    # best-studied members and let the user choose, instead of loading one.
+    family_word = " ".join(re.findall(r"[a-z0-9]+", name.lower())) in resolve.FAMILY_TERMS
+    if query.kind == "auto" and query.mode != "text" and not query.has_filters() and (
+            family_word or resolution.kind == "broad" or first.kind == "broad" or (
+                first.kind in ("protein", "ambiguous")
+                and first.top_tier <= resolve.TIER_PREFIX)):
+        # a name proteins are called by ("hemoglobin subunit alpha"): only a
+        # human family counts; a bare word ("globin") may look further
+        everywhere = family_word or not (first.kind == "protein"
+                                         and first.top_tier >= resolve.TIER_PREFIX)
+        members = resolve.family(name, query.organism, everywhere)
+        if members:
+            family = resolve.Resolution(
+                "ambiguous", name, choices=members[:resolve.FAMILY_SIZE],
+                hidden=len(members) - resolve.FAMILY_SIZE)
+            family.top_tier = resolve.TIER_WORDS
+            family.leader_count = members[0].count
+            family.family = True
+            scope = (" These are human members." if members.human else
+                     "" if query.organism is not None else
+                     " Few human members have structures, so all organisms are included.")
+            result = Result("ambiguous", query)
+            result.resolution = family
+            result.notes = early_notes + [
+                "Nothing was loaded: '%s' names a whole family of proteins.%s"
+                % (name, scope)]
+            return result
 
     if resolution.kind == "ambiguous":
         result = Result("ambiguous", query)

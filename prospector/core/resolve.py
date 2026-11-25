@@ -134,6 +134,7 @@ class Resolution(object):
         self.top_tier = TIER_GENE   # how well the best candidate matched the name
         self.leader_count = 0       # structures of the best-populated candidate
         self.notes = notes or []
+        self.family = False         # the choices are members of a protein family
 
 
 def _group(candidates, tiers):
@@ -290,3 +291,136 @@ def _resolve(name, organism=None):
     return finish(Resolution("ambiguous", name, choices=strong[:MAX_CHOICES],
                              hidden=len(groups) - min(len(strong), MAX_CHOICES),
                              notes=notes))
+
+
+# ------------------------------------------------------------------ families
+# A word such as "kinase" or "GPCR" names a whole family.  `family` lists its
+# best-studied members - human first - so the user can choose one.
+COMPLEXES = {"ribosome", "ribosomes", "proteasome", "proteasomes", "nucleosome",
+             "nucleosomes", "spliceosome", "spliceosomes", "photosystem", "photosystems",
+             "photosystem i", "photosystem ii", "exosome", "apoptosome", "inflammasome",
+             "replisome", "chromatin"}
+# one protein made from several identical genes (UBB, UBC, RPS27A, UBA52 all give
+# ubiquitin): UniProt files them as a family, but there is nothing to choose
+ONE_PROTEIN = {"ubiquitin", "polyubiquitin", "calmodulin"}
+# parts found in thousands of unrelated proteins: no family to choose from
+DOMAINS = {"zinc finger", "zinc fingers", "leucine zipper", "homeodomain", "homeobox",
+           "bromodomain", "sh2 domain", "sh3 domain", "pdz domain", "helix turn helix"}
+# other ways UniProt says the same thing (names, keywords, family sentences)
+FAMILY_TERMS = {
+    "gpcr": ["G protein-coupled receptor"],
+    "gpcrs": ["G protein-coupled receptor"],
+    "g protein coupled receptor": ["G protein-coupled receptor"],
+    "g protein coupled receptors": ["G protein-coupled receptor"],
+    "nuclear receptor": ["nuclear receptor", "nuclear hormone receptor"],
+    "nuclear receptors": ["nuclear receptor", "nuclear hormone receptor"],
+    "tyrosine kinase": ["tyrosine kinase", "tyrosine-protein kinase", "Tyr protein kinase"],
+    "tyrosine kinases": ["tyrosine kinase", "tyrosine-protein kinase", "Tyr protein kinase"],
+    "serine protease": ["serine protease", "peptidase S1"],
+    "ubiquitin ligase": ["ubiquitin ligase", "E3 ubiquitin-protein ligase",
+                         "ubiquitin-protein ligase"],
+    "e3 ligase": ["E3 ubiquitin-protein ligase"],
+    "heat shock protein": ["heat shock protein", "heat shock"],
+}
+FAMILY_SIZE = 6       # members listed
+FAMILY_FLOOR = 10     # the best-studied member of a real family has at least this many
+_GREEK = set("alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu nu xi "
+             "omicron pi rho sigma tau upsilon phi chi psi omega".split())
+_TAGS = set("type subunit chain member isoform class form homolog kda like isozyme variant "
+            "family superfamily subfamily".split())
+
+
+def _flat(text):
+    """'G-protein coupled receptor 1 (TC 1.A.8)' -> 'g protein coupled receptor 1'."""
+    text = re.sub(r"\([^()]*\)|\[[^\[\]]*\]", " ", text.lower())
+    return " ".join(re.findall(r"[a-z0-9.,']+", text.replace("-", " ").replace("/", " ")))
+
+
+def _heads(text, phrase):
+    """Is ``phrase`` what ``text`` is: 'Caspase-3', 'Tubulin alpha-1B chain',
+    'Actin, cytoplasmic 1' for caspase / tubulin / actin - but not 'Cyclin-dependent
+    kinase 2' for cyclin, nor 'Histone deacetylase 1' for histone."""
+    flat, words = _flat(text), _flat(phrase)
+    for match in re.finditer(r"(?<![a-z0-9])%s(?![a-z0-9])" % re.escape(words), flat):
+        rest = flat[match.end():]
+        if rest.strip() in ("", ".") or rest.startswith(", "):
+            return True
+        # "4,6-dehydratase": a comma inside a chemical name does not end the name
+        tags = re.findall(r"[a-z0-9.,']+", re.split(r",\s", rest)[0])
+        if all(re.search(r"\d", t) or len(t) <= 3 or t in _GREEK or t in _TAGS
+               for t in tags):
+            return True
+    return False
+
+
+def family_member(protein, phrases):
+    """How ``protein`` belongs to the family: "name" (the word heads its name),
+    "family" (UniProt files it in that family), "keyword" (a UniProt keyword
+    says so) - or None."""
+    if any(_heads(protein.name, p) for p in phrases):
+        return "name"
+    if any(_heads(sentence.replace("Belongs to the ", ""), p)
+           for sentence in getattr(protein, "families", []) for p in phrases):
+        return "family"
+    keys = set(_norm(k) for k in getattr(protein, "keywords", []))
+    if any(_norm(p) in keys for p in phrases):
+        return "keyword"
+    return None
+
+
+def family_phrases(name):
+    key = " ".join(re.findall(r"[a-z0-9]+", name.lower()))
+    return FAMILY_TERMS.get(key, [name])
+
+
+def family(name, organism=None, everywhere=True):
+    """The best-studied members of the family ``name`` names, as Groups (most
+    structures first), or [] when ``name`` is not a family: one protein, a
+    complex, or a word with fewer than two members of any weight.  Human
+    proteins are tried first; ``everywhere``: then all organisms ("globin":
+    few human globins have structures, sperm whale myoglobin has hundreds)."""
+    key = " ".join(re.findall(r"[a-z0-9]+", name.lower()))
+    if key in COMPLEXES or key in DOMAINS or key in ONE_PROTEIN or not key:
+        return []
+    phrases = family_phrases(name)
+    places = [organism] if organism is not None else \
+        [organisms.Organism("Homo sapiens", organisms.HUMAN)] + ([None] if everywhere else [])
+    for place in places:
+        found = uniprot.search_family(phrases, place)
+        how = {}
+        for protein in found:
+            if protein.pdb and protein.accession not in how:
+                kind = family_member(protein, phrases)
+                if kind:
+                    how[protein.accession] = (kind, protein)
+
+        def groups_of(kinds):
+            members = [p for k, p in how.values() if k in kinds]
+            groups = _group(members, dict((p.accession, TIER_WORDS) for p in members))
+            groups.sort(key=lambda g: (-g.count, g.lead.accession))
+            return groups
+
+        def strength(groups):
+            return sum(g.count for g in groups[:FAMILY_SIZE])
+
+        # a name or a family sentence says exactly what a protein is; a keyword is
+        # looser ("Protease" is also given to precursors of protein-cutting enzymes),
+        # so keyword members count only when they make a far better list
+        # (protease, GPCR, ion channel, lectin: words UniProt rarely puts in names)
+        precise = groups_of(("name", "family"))
+        loose = groups_of(("name", "family", "keyword"))
+        groups = loose if strength(loose) > 2 * strength(precise) else precise
+        if not groups:
+            continue
+        top = groups[0].count
+        weighty = [g for g in groups if g.count >= max(3, 0.1 * top)]
+        if len(weighty) >= 2 and top >= FAMILY_FLOOR:
+            listed = FamilyList(groups)
+            listed.human = place is not None and place.taxid == organisms.HUMAN
+            return listed
+    return []
+
+
+class FamilyList(list):
+    """Groups, plus whether only human proteins were looked at."""
+    human = False

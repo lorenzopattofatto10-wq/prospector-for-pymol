@@ -398,6 +398,18 @@ class Panel(QtWidgets.QDialog):
         self.units.setToolTip("whole = all the chains that work together (an aquaporin "
                               "tetramer); one = a single chain; file = exactly what the "
                               "PDB file holds, crystal copies included")
+        self.piece_chain = field("chain A", 60)
+        self.piece_from = field("from 19", 60)
+        self.piece_to = field("to 40", 60)
+        for box in (self.piece_chain, self.piece_from, self.piece_to):
+            box.setMaximumWidth(110)
+            box.returnPressed.connect(self.run_piece)
+        self.piece_colour = QtWidgets.QComboBox()
+        for label, value in (("keep its colours", ""), ("red", "red"), ("blue", "blue"),
+                             ("green", "green"), ("yellow", "yellow"),
+                             ("orange", "orange"), ("magenta", "magenta"),
+                             ("cyan", "cyan"), ("white", "white")):
+            self.piece_colour.addItem(label, value)
         unit_action = lambda: self.run_tool("unit", after=self.units.currentData())
         self.units.activated.connect(lambda *ignored: unit_action())
         style_action = lambda: self.run_tool("viewas", after=self.styles.currentData())
@@ -411,6 +423,12 @@ class Panel(QtWidgets.QDialog):
             ("How much of it", [self.units, make_button("Apply again", unit_action)],
              "Pick from the list - it changes at once. The whole molecule (e.g. all 4 "
              "chains of aquaporin), one chain, or exactly what the PDB file holds."),
+            ("Separate part", [self.piece_chain, self.piece_from, self.piece_to,
+                               self.piece_colour,
+                               make_button("Make it a separate object", self.run_piece)],
+             "Copies a chain, or residues 'from'-'to' of it, into a new object of its "
+             "own (it appears in PyMOL's list on the right; colour, hide or show it by "
+             "itself). Leave 'from' and 'to' empty for the whole chain."),
             ("Draw it as", [self.styles, make_button("Apply again", style_action)],
              "Pick from the list - the view changes at once. How the atoms are drawn: "
              "ribbon, sticks, balls, surface ..."),
@@ -964,6 +982,23 @@ class Panel(QtWidgets.QDialog):
                                  "'Pick two points by clicking' and click them.")
             return
         self.run_with("measure {name} %s", "%s %s" % (first, second))
+
+    def run_piece(self):
+        chain = self.piece_chain.text().strip()
+        start, end = self.piece_from.text().strip(), self.piece_to.text().strip()
+        if not chain and not start:
+            self.message.setText("Type a chain (e.g. A) and, if you like, the first and "
+                                 "last residue numbers - then press the button.")
+            return
+        part = "%s-%s" % (start, end) if start and end else (start or end)
+        if chain and part:
+            text = "%s %s" % (chain, part)
+        elif chain:
+            text = "chain %s" % chain
+        else:
+            text = part
+        colour = self.piece_colour.currentData()
+        self.run_with("piece {name} %s", "%s %s" % (text, colour or ""))
 
     def _target(self):
         """What the tool buttons act on: the loaded structure chosen at the top,
