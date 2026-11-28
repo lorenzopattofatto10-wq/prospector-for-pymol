@@ -849,6 +849,8 @@ EXAMPLES
         ran = [line.replace("{o}", obj) for line in lines]
         for line in ran:
             cmd.do(line, echo=0)
+        if any("surface" in line for line in ran):
+            worker.later(lambda: cmd.rebuild())     # see viewas: draw the surface
         _say("")
         _say("Applied '%s' to %s." % (preset, obj if obj != "all" else "everything"))
         _say("ON SCREEN    %s" % description)
@@ -931,6 +933,23 @@ def _style_menu():
     _say("             viewas <protein> <style>   e.g.  viewas p53 sticks")
     _say("             viewas <style>+<style>     combine, e.g.  viewas cartoon+sticks")
     _say("Colours do not change. For ready-made colour schemes see:  look")
+
+
+def _style_line(line):
+    """Run one line of a style through PyMOL's API at once (in PyMOL's window
+    cmd.do only queues it, so the rebuild after it would come too early)."""
+    head, _, rest = line.partition(" ")
+    args = [a.strip() for a in rest.split(",")]
+    if head == "show_as":
+        cmd.show_as(args[0], args[1])
+    elif head == "show":
+        cmd.show(args[0], args[1])
+    elif head == "cartoon":
+        cmd.cartoon(args[0], args[1])
+    elif head == "set":
+        cmd.set(args[0], float(args[1]), args[2])
+    else:
+        cmd.do(line, echo=0)
 
 
 def viewas(*args, **kwargs):
@@ -1021,9 +1040,13 @@ EXAMPLES
                            .replace("{p}", fill["p"]).replace("{l}", fill["l"])
                 if index > 0:          # later styles are added on top of the first
                     line = line.replace("show_as ", "show ")
-                cmd.do(line, echo=0)
+                _style_line(line)
                 teach.note(line, "show_as = show only this" if line.startswith("show_as")
                            else "")
+        # In PyMOL's window a surface asked for right after a scene was stored
+        # (the snapshot for  back ) can stay undrawn ("genBuffer failed").  A
+        # rebuild once the window has caught up draws it.
+        worker.later(lambda: cmd.rebuild(obj))
         cmd.deselect()
         _say("")
         _say("NOW VIEWING  %s as %s" % (obj, " + ".join(

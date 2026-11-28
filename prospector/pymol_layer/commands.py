@@ -13,7 +13,7 @@ from ..core import cache, card, chemcomp, http, rcsb, report, search, store, uni
 from ..core import features as feat
 from . import teach, worker
 
-VERSION = "2.9.7"
+VERSION = "2.9.8"
 _listeners = []   # panel callbacks: function(command_name, search.Result)
 
 
@@ -976,6 +976,7 @@ def _identify(name):
     return None
 
 
+WHATIF_SCENE = "_prospector_whatif"   # how things looked before whatif (tools.py)
 _undo = []          # [(scene name, what was about to happen, {object: transparency})]
 _undo_count = [0]
 
@@ -1071,6 +1072,11 @@ def _restore(silent=False):
             cmd.set("stick_radius", 0.25, name)
     if scene:
         cmd.scene(scene, "clear")
+    if str(grid_mode) in ("0", "off") and \
+            WHATIF_SCENE in (cmd.get_scene_list() or []):   # back went past a whatif
+        cmd.scene(WHATIF_SCENE, "clear")
+        from . import tools
+        tools._whatif_before.clear()
     cmd.deselect()
     if silent:
         return ""

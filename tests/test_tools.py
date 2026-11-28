@@ -201,6 +201,32 @@ class ToolTests(unittest.TestCase):
         self.assertIn("Did you mean whatif pep K2E ?", confused)
         self.assertNotIn("Loaded the best match", confused)
 
+    def test_whatif_hides_dashes_and_whatif_off_restores_the_look(self):
+        # dashed lines left by pocket or measure must not get panels of their own
+        cmd.color("red", "pep")
+        cmd.distance("measure_1", "pep and resi 1 and name CA", "pep and resi 4 and name CA")
+        self.run_line("whatif pep K2E")
+        shown = set(cmd.get_names("objects", enabled_only=1))
+        self.assertNotIn("measure_1", shown)
+        self.assertEqual(shown - {"pep", "pep_K2E", "whatif_bonds_before",
+                                  "whatif_bonds_after"}, {"whatif_original", "whatif_changed"})
+        self.assertGreater(float(cmd.get("cartoon_transparency", "pep")), 0)
+        self.run_line("whatif off")
+        shown = set(cmd.get_names("objects", enabled_only=1))
+        self.assertIn("measure_1", shown)                      # brought back
+        self.assertIn("pep", shown)
+        self.assertNotIn("pep_K2E", shown)                     # loaded, but hidden
+        self.assertEqual(float(cmd.get("cartoon_transparency", "pep")), 0)
+        colours = set()
+        cmd.iterate("pep and elem C", "colours.add(color)", space={"colours": colours})
+        self.assertEqual(colours, {cmd.get_color_index("red")})  # not left grey
+        self.assertNotIn(self.commands.WHATIF_SCENE, cmd.get_scene_list() or [])
+        # back after whatif forgets what whatif saved
+        self.run_line("whatif pep K2E")
+        self.run_line("back")
+        self.assertNotIn(self.commands.WHATIF_SCENE, cmd.get_scene_list() or [])
+        self.assertIn("measure_1", cmd.get_names("objects", enabled_only=1))
+
     def test_changes_work_on_residues_with_two_modelled_shapes(self):
         # give residue 3 an alternate conformation, as many real entries have
         cmd.alter("pep and resi 3", "alt='A'")

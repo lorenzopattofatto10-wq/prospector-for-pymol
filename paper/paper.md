@@ -126,7 +126,7 @@ answers are cached so that a prepared class still works without a network.
 Plain sentences are first interpreted by built-in rules; only those the rules
 cannot read are sent, if the user supplies their own API key, to an optional
 large language model, whose suggested commands are checked against a fixed
-list and always shown before they run. An offline test suite of 201 tests and
+list and always shown before they run. An offline test suite of 202 tests and
 395 example sentences checks the behaviour.
 
 ![Prospector's panel docked inside PyMOL during the sickle-cell experiment of

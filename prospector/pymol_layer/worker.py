@@ -207,5 +207,18 @@ def submit(job, done, before=None):
     return False
 
 
+def later(function, delay_ms=300):
+    """Run ``function`` on the GUI thread a moment from now, after PyMOL's
+    window has redrawn; without a window, at once."""
+    if _bridge is None:
+        function()
+        return
+    QtCore, _ = _qt()
+
+    def schedule():
+        QtCore.QTimer.singleShot(delay_ms, function)
+    _bridge.deliver.emit(schedule)
+
+
 def pending():
     return _pending
