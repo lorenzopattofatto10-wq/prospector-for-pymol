@@ -1276,10 +1276,50 @@ def _side_chain_facts(source, where):
 
 def _whatif_off(quiet=False):
     base._leave_panels()
+    _whatif_restore()
     if not quiet:
         _say("")
         _say("Back to one panel. The changed version stays loaded (hidden); "
              " enable <name>  shows it,  delete <name>  removes it.")
+
+
+_whatif_before = {}     # what whatif changed, so that  whatif off  can put it back
+
+
+def _whatif_remember(obj):
+    """Store how things look before whatif changes them: colours, what is drawn
+    and which objects are shown (a scene without the camera), plus the
+    see-through ribbon and stick thickness that a scene does not keep."""
+    _whatif_before.clear()
+    try:
+        cmd.scene(base.WHATIF_SCENE, "store", view=0)
+    except Exception:
+        return
+    _whatif_before.update(obj=obj, settings=dict(
+        (name, (cmd.get("cartoon_transparency", name), cmd.get("stick_radius", name)))
+        for name in base._molecules()))
+
+
+def _whatif_restore():
+    """Undo what whatif did to the original: its colours, ribbon and sticks, and
+    the objects it hid (other structures, measurements, pocket dashes)."""
+    if not _whatif_before:
+        return
+    names = cmd.get_names("all")
+    if base.WHATIF_SCENE in (cmd.get_scene_list() or []):
+        cmd.scene(base.WHATIF_SCENE, "recall", animate=0)
+        cmd.scene(base.WHATIF_SCENE, "clear")
+    for name, (transparency, radius) in _whatif_before.get("settings", {}).items():
+        if name in names:
+            cmd.set("cartoon_transparency", transparency, name)
+            cmd.set("stick_radius", radius, name)
+    obj = _whatif_before.get("obj")
+    if obj in names:
+        cmd.label(obj, "")
+    mutant = _whatif_before.get("mutant")
+    if mutant in names:             # the changed copy stays loaded, but hidden
+        cmd.disable(mutant)
+    _whatif_before.clear()
 
 
 _OPEN_CHANGE = re.compile(r"^(?:([A-Za-z0-9]{1,4})/)?(first|last|-?\d+)([A-Za-z])?$", re.I)
@@ -1422,10 +1462,12 @@ EXAMPLES
 
         # build the changed version on a copy
         _whatif_off(quiet=True)
+        _whatif_remember(obj)
         cmd.enable(obj)
         tag = "_".join("%s%s%s" % (old, resi, new) for _, resi, old, new, _ in changes)
         mutant = re.sub(r"[^A-Za-z0-9_]", "_", "%s_%s" % (obj, tag))
         _copy_for_change(obj, mutant)
+        _whatif_before["mutant"] = mutant
         teach.note("create %s, %s" % (mutant, obj), "change a copy, keep the original")
         failed = ""
         try:
@@ -1443,8 +1485,10 @@ EXAMPLES
                  "happen at chain ends or where atoms are missing.)" % failed)
             return
 
-        # draw both the same way, then put them in two panels
-        for name in base._molecules(enabled_only=True):
+        # draw both the same way, then put them in two panels.  Everything else
+        # is hidden - not only other structures but also dashed lines left by
+        # pocket or measure, which would each get a panel of their own
+        for name in cmd.get_names("objects", enabled_only=1) or []:
             if name not in (obj, mutant):
                 cmd.disable(name)
         cmd.enable(mutant)

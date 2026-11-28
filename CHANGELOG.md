@@ -1,5 +1,22 @@
 # Changelog - Prospector for PyMOL
 
+## 2.9.8
+
+Three problems found by recording a real PyMOL session (the worksheet's order:
+pocket, measure, whatif, whatif off):
+
+- **`whatif` shows two panels again after `pocket` or `measure`.** The dashed lines
+  those commands leave each took a panel of their own, so students saw three or
+  four squeezed panels. Everything other than the two structures is now hidden
+  while the panels are shown.
+- **`whatif off` puts the original back as it was:** its colours, solid ribbon
+  and the dashes and other objects `whatif` hid. Before, the protein stayed grey
+  and see-through, so `pocket` and `measure` afterwards looked washed out.
+- **`viewas surface` draws the surface in PyMOL's window** (and `look
+  hydrophobicity` its coloured surface). PyMOL left a surface undrawn when it was
+  asked for right after the snapshot that `back` uses; it is now redrawn a
+  moment later. Tests without a window could not see this.
+
 ## 2.9.7
 
 - **New command `piece`: part of a structure as a separate object.** `piece A 19-40`,
